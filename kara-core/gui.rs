@@ -34,7 +34,7 @@ use crate::config::state::ParsedConfig;
 use self::{controls::Controls, scene::Scene};
 
 pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
-    let stt_source = stt_source(&config.nlu.stt.source)?;
+    let stt_source = stt_source(&config.nlu.stt.source).await?;
     let handle = Handle::current();
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();

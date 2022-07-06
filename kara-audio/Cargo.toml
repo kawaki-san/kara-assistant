@@ -11,9 +11,15 @@ rustfft = "6.0.1"
 cpal = "0.13.5"
 apodize = "1.0.0"
 vosk = "0.1.0"
-tokio = { version = "1.18.0", features = [ "rt-multi-thread" ] }
+tokio = { version = "1.18.0", features = [ "rt-multi-thread", "fs", "io-util" ] }
 rubato = "0.12.0"
 iced_winit = { git = "https://github.com/iced-rs/iced" }
 serde = { version = "1.0.137", features = [ "derive" ] }
 anyhow = "1.0.57"
 gag = "1.0.0"
+reqwest = { version = "0.11.11", features = [ "stream" ] }
+dirs = "4.0.0"
+tempfile = "3.3.0"
+futures-util = "0.3.21"
+indicatif = "0.16.2"
+zip = "0.6.2"

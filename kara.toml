@@ -85,11 +85,11 @@
 #[natural-language-understanding.speech-to-text.kara]
 # Model path
 #
-# The .tflite model file to use for transcription:
+# The directory of the model to use for transcription:
 #     Paths must be absolute (starting with /) or relative to the user's home 
 #     directory.
 #
-# You may want to take a look at (https://stt.readthedocs.io/en/latest/)
+# You may want to take a look at (https://alphacephei.com/vosk)
 #model-path = ""
 
 #[natural-language-understanding.speech-to-text.watson]
