@@ -33,8 +33,8 @@ OUT_DIR = "./dist"
 private = true
 script_runner = "@duckscript"
 script = '''
-file1 = is_path_exists ./kara-lib/libvosk.so
-file2 = is_path_exists ./kara-lib/vosk_api.h
+file1 = is_path_exists ./${LIB_DIR}/libvosk.so
+file2 = is_path_exists ./${LIB_DIR}/vosk_api.h
 if ${file1} and ${file2}
   # echo "Located libraries..."
 else
@@ -68,9 +68,9 @@ else
   end
   exec mkdir -p ${LIB_DIR}
   echo "Extracting libraries"
-  exec bsdtar -xzf kara-lib.zip -C ${LIB_DIR} --strip-components=1
+  exec bsdtar -xzf ${LIB_DL_FILE} -C ${LIB_DIR} --strip-components=1
   echo "Tidying up..."
-  exec rm -rf kara-lib.zip
+  exec rm -rf ${LIB_DL_FILE}
   end
 end
 '''
