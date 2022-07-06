@@ -1519,7 +1519,6 @@ dependencies = [
  "rubato",
  "rustfft",
  "serde",
- "tempfile",
  "tokio",
  "tracing",
  "vosk",
