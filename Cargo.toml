@@ -19,7 +19,6 @@ bytemuck = { version = "1.9.1", features = [ "derive" ] }
 tokio = { version = "1.18.0", features = [ "macros", "rt-multi-thread" ] }
 serde = { version = "1.0.137", features = [ "derive" ] }
 toml = "0.5.9"
-crossbeam-channel = "0.5.5"
 
 [workspace]
 members = [

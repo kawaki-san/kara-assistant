@@ -41,7 +41,6 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let handle = Handle::current();
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();
-    let (tx, rx) = crossbeam_channel::unbounded();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
                                            /* TODO: Create an enum for events?*/
     // Keep an event that's activated when a wake word has been detected so that transcription may
@@ -54,8 +53,6 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
         proxy,
         stt_source,
         Arc::clone(&is_processing),
-        tx.clone(),
-        rx.clone(),
         Arc::clone(&wake_up),
     );
     let window = iced_winit::winit::window::WindowBuilder::new()

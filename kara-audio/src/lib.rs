@@ -12,7 +12,6 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Sample,
 };
-use crossbeam_channel::{Receiver, Sender};
 use iced_winit::winit::event_loop::EventLoopProxy;
 use tracing::{debug, error};
 
@@ -66,8 +65,6 @@ pub fn start_stream(
     stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
     is_processing: Arc<Mutex<AtomicBool>>,
-    tx: Sender<Vec<f32>>,
-    rx: Receiver<Vec<f32>>,
     wake_up: Arc<Mutex<AtomicBool>>,
 ) -> mpsc::Sender<Event> {
     let audio_stream = AudioStream::init(&vis_settings);
@@ -77,8 +74,6 @@ pub fn start_stream(
         stt_proxy,
         stt_source,
         is_processing,
-        tx,
-        rx,
         wake_up,
     );
     event_sender
@@ -89,12 +84,11 @@ pub fn init_audio_sender(
     stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
     is_processing: Arc<Mutex<AtomicBool>>,
-    tx: Sender<Vec<f32>>,
-    rx: Receiver<Vec<f32>>,
     wake_up: Arc<Mutex<AtomicBool>>,
 ) {
     let inner_is_processing = Arc::clone(&is_processing);
     let inner_wake = Arc::clone(&wake_up);
+    let (tx, rx) = crossbeam_channel::unbounded();
     tokio::spawn(async move {
         let host = cpal::default_host();
         // Set up the input device and stream with the default input config.

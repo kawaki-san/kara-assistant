@@ -1491,7 +1491,6 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "clap",
- "crossbeam-channel",
  "dirs",
  "iced_wgpu",
  "iced_winit",
