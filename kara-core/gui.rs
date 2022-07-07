@@ -40,6 +40,8 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let event_loop = EventLoop::with_user_event();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
                                            /* TODO: Create an enum for events?*/
+    // Keep an event that's activated when a wake word has been detected so that transcription may
+    // begin. When the request has been processed, reset the flag
     let stream = kara_audio::visualiser_stream(Config::default(), proxy, stt_source);
     let window = iced_winit::winit::window::WindowBuilder::new()
         .with_transparent(true)
@@ -303,9 +305,21 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                 window.request_redraw()
             }
             // Receiving feed (speech) from the user
-            Event::UserEvent(val) => {
-                state.queue_message(controls::Message::TextChanged(val));
-            }
+            Event::UserEvent(val) => match val {
+                kara_audio::events::KaraEvents::WakeWordDetected(val) => {
+                    if val {
+                        // if wake word has been detected, begin transcription
+                        // change visualiser colour to active
+                    }
+                }
+                kara_audio::events::KaraEvents::SpeechFeed(feed) => {
+                    state.queue_message(controls::Message::TextChanged(feed));
+                }
+                kara_audio::events::KaraEvents::ProcessCommand(_transcription) => {
+                    // arg is the final transcription result, do nlp/intent classification
+                    // When this is done, start listening for wake word again
+                }
+            },
             _ => {}
         }
     });

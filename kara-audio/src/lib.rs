@@ -12,10 +12,12 @@ use iced_winit::winit::event_loop::EventLoopProxy;
 use tracing::{debug, error};
 
 use self::{
+    events::KaraEvents,
     stream::{AudioStream, Event},
     stt_sources::STTSource,
 };
 
+pub mod events;
 pub mod stream;
 pub mod stt_sources;
 pub const SAMPLE_RATE: u32 = 16000;
@@ -56,7 +58,7 @@ impl Default for Config {
 
 pub fn visualiser_stream(
     vis_settings: Config,
-    stt_proxy: EventLoopProxy<String>,
+    stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
 ) -> mpsc::Sender<Event> {
     let audio_stream = AudioStream::init(&vis_settings);
@@ -67,7 +69,7 @@ pub fn visualiser_stream(
 
 pub fn init_audio_sender(
     event_sender: mpsc::Sender<Event>,
-    stt_proxy: EventLoopProxy<String>,
+    stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
 ) {
     let (tx, rx) = mpsc::channel();
@@ -133,8 +135,9 @@ pub fn init_audio_sender(
                 while let Ok(val) = rx.recv() {
                     let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
                     stream.accept_waveform(&val);
-                    if let Err(e) = stt_proxy.send_event(stream.partial_result().partial.to_owned())
-                    {
+                    if let Err(e) = stt_proxy.send_event(KaraEvents::SpeechFeed(
+                        stream.partial_result().partial.to_owned(),
+                    )) {
                         tracing::error!("{}", e);
                     }
                 }
