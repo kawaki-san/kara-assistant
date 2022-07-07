@@ -46,6 +46,10 @@ struct SpeechToText {
 struct STTKara {
     #[serde(rename = "model-path")]
     model_path: Option<String>,
+    #[serde(rename = "silence-level")]
+    silence_level: Option<u32>,
+    #[serde(rename = "show-amp")]
+    show_amplitude: Option<bool>,
 }
 
 pub mod state {
@@ -119,7 +123,7 @@ pub mod state {
         fn default() -> Self {
             Self {
                 pause_length: 1.5,
-                source: STTConfig::base(DEFAULT_STT_MODEL),
+                source: STTConfig::default(),
             }
         }
     }
@@ -127,44 +131,38 @@ pub mod state {
     impl From<ConfigFile> for ParsedConfig {
         fn from(conf: ConfigFile) -> Self {
             let units = match &conf.general_settings {
-                Some(val) => {
-                    let units = match &val.units {
-                        Some(units) => {
-                            if units.trim().eq_ignore_ascii_case("metric") {
-                                Units::Metric
-                            } else if units.trim().eq_ignore_ascii_case("imperial") {
-                                Units::Imperial
-                            } else {
-                                eprintln!("error reading units config: acceptable values are metric and imperial");
-                                Units::Metric
-                            }
+                Some(val) => match &val.units {
+                    Some(units) => {
+                        if units.trim().eq_ignore_ascii_case("metric") {
+                            Units::Metric
+                        } else if units.trim().eq_ignore_ascii_case("imperial") {
+                            Units::Imperial
+                        } else {
+                            eprintln!("error reading units config: acceptable values are metric and imperial");
+                            Units::Metric
                         }
-                        None => Units::Metric,
-                    };
-                    units
-                }
+                    }
+                    None => Units::Metric,
+                },
                 None => Units::Metric,
             };
 
             let ui = match &conf.general_settings {
-                Some(val) => {
-                    let ui = match &val.default_mode {
-                        Some(ui) => {
-                            if ui.trim().eq_ignore_ascii_case("gui") {
-                                Interface::Gui
-                            } else if ui.trim().eq_ignore_ascii_case("cli") {
-                                Interface::Cli
-                            } else {
-                                eprintln!(
-                                    "error reading units config: acceptable values are gui and cli"
-                                );
-                                Interface::Gui
-                            }
+                Some(val) => match &val.default_mode {
+                    Some(ui) => {
+                        if ui.trim().eq_ignore_ascii_case("gui") {
+                            Interface::Gui
+                        } else if ui.trim().eq_ignore_ascii_case("cli") {
+                            Interface::Cli
+                        } else {
+                            eprintln!(
+                                "error reading units config: acceptable values are gui and cli"
+                            );
+                            Interface::Gui
                         }
-                        None => Interface::Gui,
-                    };
-                    ui
-                }
+                    }
+                    None => Interface::Gui,
+                },
                 None => Interface::Gui,
             };
 
@@ -210,7 +208,15 @@ pub mod state {
                                         }
                                         None => DEFAULT_STT_MODEL.to_owned(),
                                     };
-                                    STTConfig::Kara(model_path)
+                                    match &stt.kara_config {
+                                        Some(k_conf) => STTConfig::Kara(
+                                            model_path,
+                                            k_conf.silence_level.unwrap_or(150),
+                                            k_conf.show_amplitude.unwrap_or_default(),
+                                        ),
+
+                                        None => STTConfig::Kara(model_path, 150, false),
+                                    }
                                 }
                                 "watson" => {
                                     todo!()
@@ -219,13 +225,13 @@ pub mod state {
                                     todo!()
                                 }
                             },
-                            None => STTConfig::Kara(DEFAULT_STT_MODEL.to_owned()),
+                            None => STTConfig::default(),
                         };
                         (pause_length, source)
                     }
-                    None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned())),
+                    None => (1.5, STTConfig::default()),
                 },
-                None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned())),
+                None => (1.5, STTConfig::default()),
             };
             let window = match &conf.window {
                 Some(win) => {

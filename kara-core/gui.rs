@@ -54,6 +54,7 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
         stt_source,
         Arc::clone(&is_processing),
         Arc::clone(&wake_up),
+        config.nlu.stt.pause_length,
     );
     let window = iced_winit::winit::window::WindowBuilder::new()
         .with_transparent(true)

@@ -1,15 +1,14 @@
-use std::{
-    cmp::min,
-    io::Write,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-};
-
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{
     header::{ACCEPT_RANGES, CONTENT_LENGTH, RANGE},
     Client, StatusCode,
+};
+use std::{
+    cmp::min,
+    io::Write,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 use tokio::{
     fs::{create_dir_all, OpenOptions},
@@ -23,10 +22,41 @@ use crate::SAMPLE_RATE;
 use super::STTSource;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 const VOSK_MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip";
+
+#[derive(Clone)]
+pub struct KaraTranscriber {
+    recogniser: Arc<Mutex<vosk::Recognizer>>,
+    show_amplitudes: bool,
+    silence_level: u32,
+}
+
+impl KaraTranscriber {
+    pub fn new(recogniser: vosk::Recognizer, silence_level: u32, show_amp: bool) -> Self {
+        Self {
+            recogniser: Arc::new(Mutex::new(recogniser)),
+            show_amplitudes: show_amp,
+            silence_level,
+        }
+    }
+    pub fn recogniser(&self) -> Arc<Mutex<vosk::Recognizer>> {
+        Arc::clone(&self.recogniser)
+    }
+
+    pub fn show_amplitudes(&self) -> bool {
+        self.show_amplitudes
+    }
+    pub fn silence_level(&self) -> u32 {
+        self.silence_level
+    }
+}
 /// Initialises a Coqui STT model with an (optional) scorer (language model).
 /// Panics if the STT model could not be initialised
 #[tracing::instrument]
-pub(crate) async fn init_kara_model(model: &str) -> Result<STTSource> {
+pub(crate) async fn init_kara_model(
+    model: &str,
+    silence_level: &u32,
+    show_amp: &bool,
+) -> Result<STTSource> {
     use gag::Gag;
     let _print_gag = Gag::stderr().unwrap();
     trace!("initialising kara stt model");
@@ -42,7 +72,11 @@ pub(crate) async fn init_kara_model(model: &str) -> Result<STTSource> {
             recogniser.set_partial_words(true);
             trace!(path = %model, "located model");
             trace!("kara stt model initialised");
-            Ok(STTSource::Kara(Arc::new(Mutex::new(recogniser))))
+            Ok(STTSource::Kara(KaraTranscriber::new(
+                recogniser,
+                *silence_level,
+                *show_amp,
+            )))
         }
         Err(e) => {
             warn!("{e}");
@@ -50,7 +84,14 @@ pub(crate) async fn init_kara_model(model: &str) -> Result<STTSource> {
             let mut data_dir = data_dir().await;
             drop(_print_gag);
 
-            download_model(&Client::new(), VOSK_MODEL_URL, &mut data_dir).await
+            download_model(
+                &Client::new(),
+                VOSK_MODEL_URL,
+                &mut data_dir,
+                silence_level,
+                show_amp,
+            )
+            .await
         }
     }
 }
@@ -96,7 +137,13 @@ impl Iterator for PartialRangeIter {
 }
 
 #[tracing::instrument]
-async fn download_model(client: &Client, url: &str, path_buf: &mut PathBuf) -> Result<STTSource> {
+async fn download_model(
+    client: &Client,
+    url: &str,
+    path_buf: &mut PathBuf,
+    silence_level: &u32,
+    show_amp: &bool,
+) -> Result<STTSource> {
     let head = client.head(url).send().await?;
     let content_length = head.headers().get(CONTENT_LENGTH);
     let accept_range = head.headers().get(ACCEPT_RANGES);
@@ -159,18 +206,31 @@ async fn download_model(client: &Client, url: &str, path_buf: &mut PathBuf) -> R
                         file,
                         path_buf.parent().unwrap(),
                         &path_buf.display().to_string(),
+                        silence_level,
+                        show_amp,
                     )
                     .await
                 }
                 None => {
                     // redownload file
-                    Ok(download_no_resume(client, path_buf, url, &file_name).await?)
+                    Ok(download_no_resume(
+                        client,
+                        path_buf,
+                        url,
+                        &file_name,
+                        silence_level,
+                        show_amp,
+                    )
+                    .await?)
                 }
             }
         }
         None => {
             //redownload file
-            Ok(download_no_resume(client, path_buf, url, &file_name).await?)
+            Ok(
+                download_no_resume(client, path_buf, url, &file_name, silence_level, show_amp)
+                    .await?,
+            )
         }
     }
 }
@@ -180,6 +240,8 @@ async fn download_no_resume(
     path_buf: &Path,
     url: &str,
     file_name: &str,
+    silence_level: &u32,
+    show_amp: &bool,
 ) -> Result<STTSource> {
     let res = client
         .get(url)
@@ -205,11 +267,24 @@ async fn download_no_resume(
         pb.set_position(new);
     }
     pb.finish_with_message(format!("Downloaded {} to {}", url, path_buf.display()));
-    extract_file(file, path_buf.parent().unwrap(), file_name).await
+    extract_file(
+        file,
+        path_buf.parent().unwrap(),
+        file_name,
+        silence_level,
+        show_amp,
+    )
+    .await
 }
 
 #[tracing::instrument]
-async fn extract_file(file: std::fs::File, parent: &Path, file_name: &str) -> Result<STTSource> {
+async fn extract_file(
+    file: std::fs::File,
+    parent: &Path,
+    file_name: &str,
+    silence_level: &u32,
+    show_amp: &bool,
+) -> Result<STTSource> {
     trace!("extracting file");
     use gag::Gag;
     let _print_gag = Gag::stderr().unwrap();
@@ -233,7 +308,11 @@ async fn extract_file(file: std::fs::File, parent: &Path, file_name: &str) -> Re
     recogniser.set_words(true);
     recogniser.set_partial_words(true);
     trace!("kara stt model initialised");
-    Ok(STTSource::Kara(Arc::new(Mutex::new(recogniser))))
+    Ok(STTSource::Kara(KaraTranscriber::new(
+        recogniser,
+        *silence_level,
+        *show_amp,
+    )))
 }
 
 async fn data_dir() -> PathBuf {

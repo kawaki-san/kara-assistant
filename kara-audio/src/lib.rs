@@ -1,5 +1,5 @@
 use std::{
-    ops::Range,
+    ops::{Neg, Range},
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc, Arc, Mutex,
@@ -66,6 +66,7 @@ pub fn start_stream(
     stt_source: STTSource,
     is_processing: Arc<Mutex<AtomicBool>>,
     wake_up: Arc<Mutex<AtomicBool>>,
+    pause_length: f32,
 ) -> mpsc::Sender<Event> {
     let audio_stream = AudioStream::init(&vis_settings);
     let event_sender = audio_stream.get_event_sender();
@@ -75,6 +76,7 @@ pub fn start_stream(
         stt_source,
         is_processing,
         wake_up,
+        pause_length,
     );
     event_sender
 }
@@ -85,6 +87,7 @@ pub fn init_audio_sender(
     stt_source: STTSource,
     is_processing: Arc<Mutex<AtomicBool>>,
     wake_up: Arc<Mutex<AtomicBool>>,
+    pause_length: f32,
 ) {
     let inner_is_processing = Arc::clone(&is_processing);
     let inner_wake = Arc::clone(&wake_up);
@@ -158,8 +161,8 @@ pub fn init_audio_sender(
                 && wake_up.lock().unwrap().load(Ordering::Relaxed)
             {
                 match stt_source.clone() {
-                    STTSource::Kara(model) => {
-                        let stream = Arc::clone(&model);
+                    STTSource::Kara(kara_transcriber) => {
+                        let stream = Arc::clone(&kara_transcriber.recogniser());
                         let mut stream = stream.lock().unwrap();
                         let mut silence_start: Option<Instant> = None;
                         let mut sound_from_start_till_pause: Vec<f32> = Vec::new();
@@ -168,11 +171,17 @@ pub fn init_audio_sender(
                             let sound_as_ints = val.iter().map(|f| (*f * 1000.0) as i32);
                             let max_amplitude = sound_as_ints.clone().max().unwrap_or(0);
                             let min_amplitude = sound_as_ints.clone().min().unwrap_or(0);
-                            let silence_detected = max_amplitude < 200 && min_amplitude > -200;
+                            if kara_transcriber.show_amplitudes() {
+                                println!("Amplitude Range: {} to {}", min_amplitude, max_amplitude);
+                            }
+                            let min_bound: i32 = kara_transcriber.silence_level() as i32;
+                            let silence_detected = max_amplitude
+                                < kara_transcriber.silence_level().try_into().unwrap()
+                                && min_amplitude > min_bound.neg();
                             if silence_detected {
                                 match silence_start {
                                     Some(s) => {
-                                        if s.elapsed().as_secs_f32() > 1.5 {
+                                        if s.elapsed().as_secs_f32() > pause_length {
                                             break;
                                         }
                                     }
