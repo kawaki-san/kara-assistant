@@ -1,4 +1,7 @@
-use std::sync::{mpsc, Arc};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    mpsc, Arc, Mutex,
+};
 
 use iced_wgpu::{
     wgpu::{
@@ -38,11 +41,23 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let handle = Handle::current();
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();
+    let (tx, rx) = crossbeam_channel::unbounded();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
                                            /* TODO: Create an enum for events?*/
     // Keep an event that's activated when a wake word has been detected so that transcription may
     // begin. When the request has been processed, reset the flag
-    let stream = kara_audio::visualiser_stream(Config::default(), proxy, stt_source);
+    let is_processing = Arc::new(Mutex::new(AtomicBool::new(false)));
+    // set this to true when wake word has been detected
+    let wake_up = Arc::new(Mutex::new(AtomicBool::new(true)));
+    let stream = kara_audio::start_stream(
+        Config::default(),
+        proxy,
+        stt_source,
+        Arc::clone(&is_processing),
+        tx.clone(),
+        rx.clone(),
+        Arc::clone(&wake_up),
+    );
     let window = iced_winit::winit::window::WindowBuilder::new()
         .with_transparent(true)
         .build(&event_loop)?;
@@ -135,6 +150,8 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
 
     let mut state =
         program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
+    let inner_is_processing = Arc::clone(&is_processing);
+    let inner_is_awake = Arc::clone(&wake_up);
 
     // Run event_loop
     event_loop.run(move |event, _, control_flow| {
@@ -307,6 +324,9 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
             // Receiving feed (speech) from the user
             Event::UserEvent(val) => match val {
                 kara_audio::events::KaraEvents::WakeWordDetected(val) => {
+                    // transcription will happen if @wake_up is true AND @is_processing is false
+                    let value = inner_is_awake.lock().unwrap();
+                    value.store(val, Ordering::Relaxed);
                     if val {
                         // if wake word has been detected, begin transcription
                         // change visualiser colour to active
@@ -315,9 +335,20 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                 kara_audio::events::KaraEvents::SpeechFeed(feed) => {
                     state.queue_message(controls::Message::TextChanged(feed));
                 }
-                kara_audio::events::KaraEvents::ProcessCommand(_transcription) => {
+                kara_audio::events::KaraEvents::ProcessCommand(transcription) => {
                     // arg is the final transcription result, do nlp/intent classification
                     // When this is done, start listening for wake word again
+                    state.queue_message(controls::Message::TextChanged(transcription));
+                    // process command here;
+                    inner_is_processing
+                        .lock()
+                        .unwrap()
+                        .store(false, Ordering::Relaxed);
+                    inner_is_awake
+                        .lock()
+                        .unwrap()
+                        .store(false, Ordering::Relaxed)
+                    // listen for wake word to start transcription again
                 }
             },
             _ => {}
