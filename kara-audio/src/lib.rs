@@ -1,4 +1,5 @@
 use std::{
+    ops::Range,
     sync::{mpsc, Arc},
     thread,
 };
@@ -19,14 +20,14 @@ pub mod stream;
 pub mod stt_sources;
 pub const SAMPLE_RATE: u32 = 16000;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub buffering: usize,
     pub smoothing_size: usize,
     pub smoothing_amount: usize,
     pub resolution: usize,
     pub refresh_rate: usize,
-    pub frequency_scale_range: [usize; 2],
+    pub frequency_scale_range: Range<usize>,
     pub frequency_scale_amount: usize,
     pub density_reduction: usize,
     pub max_frequency: usize,
@@ -40,7 +41,10 @@ impl Default for Config {
             smoothing_amount: 5,
             resolution: 3000,
             refresh_rate: 60,
-            frequency_scale_range: [50, 1000],
+            frequency_scale_range: Range {
+                start: 50,
+                end: 1000,
+            },
             frequency_scale_amount: 1,
             density_reduction: 5,
             //max_frequency: 20_000,
@@ -55,7 +59,7 @@ pub fn visualiser_stream(
     stt_proxy: EventLoopProxy<String>,
     stt_source: STTSource,
 ) -> mpsc::Sender<Event> {
-    let audio_stream = AudioStream::init(vis_settings);
+    let audio_stream = AudioStream::init(&vis_settings);
     let event_sender = audio_stream.get_event_sender();
     init_audio_sender(event_sender.clone(), stt_proxy, stt_source);
     event_sender

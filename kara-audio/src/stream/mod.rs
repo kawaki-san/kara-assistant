@@ -19,9 +19,11 @@ pub struct AudioStream {
     event_sender: mpsc::Sender<Event>,
 }
 impl AudioStream {
-    pub fn init(config: Config) -> Self {
+    pub fn init(config: &Config) -> Self {
         let (event_sender, event_receiver) = mpsc::channel();
+        let inner_config = config.clone();
 
+        let refresh_rate = config.refresh_rate;
         // thread that receives Events, converts and processes the received data
         // and sends it via a mpsc channel to requesting to thread that requested processed data
         thread::spawn(move || {
@@ -30,7 +32,7 @@ impl AudioStream {
             let mut calculated_buffer: Vec<f32> = Vec::new();
             let mut smoothing_buffer: Vec<Vec<f32>> = Vec::new();
             let mut smoothed_buffer: Vec<f32> = Vec::new();
-            let mut config: Config = config;
+            let mut config: Config = inner_config.clone();
 
             loop {
                 match event_receiver.recv().unwrap() {
@@ -38,7 +40,7 @@ impl AudioStream {
                         buffer.append(&mut b);
                         while buffer.len() > config.resolution {
                             let c_b =
-                                convert_buffer(&buffer[0..config.resolution].to_vec(), config);
+                                convert_buffer(&buffer[0..config.resolution].to_vec(), &config);
 
                             calculated_buffer = if !calculated_buffer.is_empty() {
                                 merge_buffers(&vec![calculated_buffer, c_b])
@@ -69,7 +71,7 @@ impl AudioStream {
                         }
                     }
                     Event::RequestConfig(sender) => {
-                        sender.send(config).unwrap();
+                        sender.send(config.clone()).unwrap();
                     }
                     Event::SendConfig(c) => {
                         config = c;
@@ -82,9 +84,7 @@ impl AudioStream {
         });
         let event_sender_clone = event_sender.clone();
         thread::spawn(move || loop {
-            thread::sleep(std::time::Duration::from_millis(
-                1000 / config.refresh_rate as u64,
-            ));
+            thread::sleep(std::time::Duration::from_millis(1000 / refresh_rate as u64));
             event_sender_clone.send(Event::RequestRefresh).unwrap();
         });
 

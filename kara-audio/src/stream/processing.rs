@@ -1,9 +1,11 @@
+use std::ops::Range;
+
 use rustfft::{num_complex::Complex, FftPlanner};
 
 use crate::Config;
 
 /// puts buffer into FFT alogrithm and applies filters and modifiers to it
-pub fn convert_buffer(input_buffer: &Vec<f32>, config: Config) -> Vec<f32> {
+pub fn convert_buffer(input_buffer: &Vec<f32>, config: &Config) -> Vec<f32> {
     let input_buffer = apodize(input_buffer);
 
     let mut planner = FftPlanner::new();
@@ -32,7 +34,7 @@ pub fn convert_buffer(input_buffer: &Vec<f32>, config: Config) -> Vec<f32> {
 
     scale_frequencies(
         &mut output_buffer,
-        config.frequency_scale_range,
+        &config.frequency_scale_range,
         config.frequency_scale_amount,
         config.max_frequency,
     );
@@ -61,15 +63,15 @@ fn apodize(buffer: &Vec<f32>) -> Vec<f32> {
 
 fn scale_frequencies(
     buffer: &mut Vec<f32>,
-    fav_freqs: [usize; 2],
+    fav_freqs: &Range<usize>,
     doubling: usize,
     max_freqs: usize,
 ) {
     let mut doubled: usize = 0;
     let buffer_len = buffer.len();
     for _ in 0..doubling {
-        let start_percentage: f32 = fav_freqs[0] as f32 / max_freqs as f32;
-        let end_percentage: f32 = fav_freqs[1] as f32 / max_freqs as f32;
+        let start_percentage: f32 = fav_freqs.start as f32 / max_freqs as f32;
+        let end_percentage: f32 = fav_freqs.end as f32 / max_freqs as f32;
 
         let start_pos: f32 = buffer_len as f32 * start_percentage;
         let end_pos: f32 = buffer_len as f32 * end_percentage;
