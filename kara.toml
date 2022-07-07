@@ -92,6 +92,24 @@
 # You may want to take a look at (https://alphacephei.com/vosk)
 #model-path = ""
 
+# Silence level
+#
+# Consider the amplitude of the audio waves lower than this value as silence
+# The decoded text will only get processed when audio lower than this level has
+# been recorded (continuously) for `pause-length`
+#silence-level = 150
+
+# Show amplitude range
+#
+# Print the amplitude values on stdout to help in determining the silence level
+# for your environment
+#
+# Values for `show-amp`:
+#     - true: Enable stdout output of audio wave amplitude
+#     - false: Disable stdout output of audio wave amplitude
+#show-amp = false
+
+
 #[natural-language-understanding.speech-to-text.watson]
 # call external program (gpg or pass?) so as to not store plain text config in
 # file?
