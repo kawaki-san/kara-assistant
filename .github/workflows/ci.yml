@@ -1,4 +1,4 @@
-name: Rust
+name: Cargo Build and Test
 
 on:
   push:
@@ -10,8 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build_and_test:
+    name: Kara - latest
     runs-on: ubuntu-latest
     strategy:
       matrix:
