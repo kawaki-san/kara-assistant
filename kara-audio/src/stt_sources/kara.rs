@@ -6,13 +6,12 @@ use reqwest::{
 };
 use std::{
     cmp::min,
-    io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 use tokio::{
-    fs::{create_dir_all, OpenOptions},
-    io::AsyncSeekExt,
+    fs::{create_dir_all, File, OpenOptions},
+    io::{AsyncSeekExt, AsyncWriteExt},
 };
 use tracing::{error, trace, warn};
 use vosk::Recognizer;
@@ -198,7 +197,7 @@ async fn download_model(
                         downloaded = new;
                         pb.set_position(downloaded);
                     }
-                    let file = std::fs::File::open(&path_buf).unwrap();
+                    let file = File::open(&path_buf).await.unwrap();
                     let content = head.bytes().await.unwrap();
                     let mut content = content.as_ref();
                     tokio::io::copy(&mut content, &mut outfile).await.unwrap();
@@ -256,12 +255,12 @@ async fn download_no_resume(
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.white/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
         .progress_chars("█  "));
     pb.set_message(format!("Downloading {}", url));
-    let mut file = std::fs::File::create(path_buf)?;
+    let mut file = File::create(path_buf).await?;
     let mut stream = res.bytes_stream();
     let mut downloaded: u64 = 0;
     while let Some(item) = stream.next().await {
         let chunk = item?;
-        file.write_all(&chunk)?;
+        file.write_all(&chunk).await?;
         let new = min(downloaded + (chunk.len() as u64), total_size);
         downloaded = new;
         pb.set_position(new);
@@ -279,7 +278,7 @@ async fn download_no_resume(
 
 #[tracing::instrument]
 async fn extract_file(
-    file: std::fs::File,
+    file: File,
     parent: &Path,
     file_name: &str,
     silence_level: &u32,
@@ -287,6 +286,7 @@ async fn extract_file(
 ) -> Result<STTSource> {
     trace!("extracting file");
     use gag::Gag;
+    let file = file.into_std().await;
     let _print_gag = Gag::stderr().unwrap();
     let file_name = PathBuf::from(file_name);
     let file_name = file_name.file_name();
