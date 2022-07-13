@@ -1,4 +1,3 @@
-use std::sync::mpsc;
 use std::thread;
 
 use crate::Config;
@@ -8,26 +7,26 @@ use self::processing::{convert_buffer, merge_buffers};
 pub mod processing;
 #[derive(Debug, Clone)]
 pub enum Event {
-    RequestData(mpsc::Sender<Vec<f32>>),
+    RequestData(crossbeam_channel::Sender<Vec<f32>>),
     SendData(Vec<f32>),
-    RequestConfig(mpsc::Sender<Config>),
+    RequestConfig(crossbeam_channel::Sender<Config>),
     SendConfig(Config),
     RequestRefresh,
     ClearBuffer,
 }
 pub struct AudioStream {
-    event_sender: mpsc::Sender<Event>,
+    event_sender: crossbeam_channel::Sender<Event>,
 }
 impl AudioStream {
-    pub fn init(config: &Config) -> Self {
-        let (event_sender, event_receiver) = mpsc::channel();
+    pub fn new(config: &Config) -> Self {
+        let (event_sender, event_receiver) = crossbeam_channel::unbounded();
         let inner_config = config.clone();
 
         let refresh_rate = config.refresh_rate;
         // thread that receives Events, converts and processes the received data
-        // and sends it via a mpsc channel to requesting to thread that requested processed data
-        thread::spawn(move || {
-            //let (event_sender, event_receiver) = mpsc::channel();
+        // and sends it via a crossbeam_channel channel to requesting to thread that requested processed data
+        tokio::spawn(async move {
+            //let (event_sender, event_receiver) = crossbeam_channel::channel();
             let mut buffer: Vec<f32> = Vec::new();
             let mut calculated_buffer: Vec<f32> = Vec::new();
             let mut smoothing_buffer: Vec<Vec<f32>> = Vec::new();
@@ -83,19 +82,21 @@ impl AudioStream {
             }
         });
         let event_sender_clone = event_sender.clone();
-        thread::spawn(move || loop {
-            thread::sleep(std::time::Duration::from_millis(1000 / refresh_rate as u64));
-            event_sender_clone.send(Event::RequestRefresh).unwrap();
+        tokio::spawn(async move {
+            loop {
+                thread::sleep(std::time::Duration::from_millis(1000 / refresh_rate as u64));
+                event_sender_clone.send(Event::RequestRefresh).unwrap();
+            }
         });
 
         AudioStream { event_sender }
     }
     pub fn get_audio_data(&self) -> Vec<f32> {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = crossbeam_channel::unbounded();
         self.event_sender.send(Event::RequestData(tx)).unwrap();
         rx.recv().unwrap()
     }
-    pub fn get_event_sender(&self) -> mpsc::Sender<Event> {
+    pub fn get_event_sender(&self) -> crossbeam_channel::Sender<Event> {
         self.event_sender.clone()
     }
 
@@ -107,7 +108,7 @@ impl AudioStream {
         self.event_sender.send(Event::SendConfig(config)).unwrap();
     }
     pub fn get_config(&self) -> Config {
-        let (tx, rx) = mpsc::channel();
+        let (tx, rx) = crossbeam_channel::unbounded();
         self.event_sender.send(Event::RequestConfig(tx)).unwrap();
         rx.recv().unwrap()
     }

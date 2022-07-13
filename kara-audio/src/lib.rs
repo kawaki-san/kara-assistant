@@ -2,7 +2,7 @@ use std::{
     ops::{Neg, Range},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc, Arc, Mutex,
+        Arc,
     },
     thread,
     time::Instant,
@@ -64,11 +64,11 @@ pub fn start_stream(
     vis_settings: Config,
     stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
-    is_processing: Arc<Mutex<AtomicBool>>,
-    wake_up: Arc<Mutex<AtomicBool>>,
+    is_processing: Arc<AtomicBool>,
+    wake_up: Arc<AtomicBool>,
     pause_length: f32,
-) -> mpsc::Sender<Event> {
-    let audio_stream = AudioStream::init(&vis_settings);
+) -> crossbeam_channel::Sender<Event> {
+    let audio_stream = AudioStream::new(&vis_settings);
     let event_sender = audio_stream.get_event_sender();
     init_audio_sender(
         event_sender.clone(),
@@ -82,11 +82,11 @@ pub fn start_stream(
 }
 
 pub fn init_audio_sender(
-    event_sender: mpsc::Sender<Event>,
+    event_sender: crossbeam_channel::Sender<Event>,
     stt_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
-    is_processing: Arc<Mutex<AtomicBool>>,
-    wake_up: Arc<Mutex<AtomicBool>>,
+    is_processing: Arc<AtomicBool>,
+    wake_up: Arc<AtomicBool>,
     pause_length: f32,
 ) {
     let inner_is_processing = Arc::clone(&is_processing);
@@ -138,10 +138,10 @@ pub fn init_audio_sender(
                     let s = waves_out.first().unwrap();
                     send_to_visualiser(s, event_sender.clone());
                     // Not currently processing any command, so do transcription
-                    let is_processing = inner_is_processing.lock().unwrap();
-                    let is_awake = inner_wake.lock().unwrap();
                     // TODO: check if wake word here
-                    if !is_processing.load(Ordering::Relaxed) && is_awake.load(Ordering::Relaxed) {
+                    if !inner_is_processing.load(Ordering::Relaxed)
+                        && inner_wake.load(Ordering::Relaxed)
+                    {
                         tx.send(data.to_owned()).unwrap();
                     }
                 },
@@ -157,9 +157,7 @@ pub fn init_audio_sender(
     let is_processing = Arc::clone(&is_processing);
     tokio::spawn(async move {
         loop {
-            if !is_processing.lock().unwrap().load(Ordering::Relaxed)
-                && wake_up.lock().unwrap().load(Ordering::Relaxed)
-            {
+            if !is_processing.load(Ordering::Relaxed) && wake_up.load(Ordering::Relaxed) {
                 match stt_source.clone() {
                     STTSource::Kara(kara_transcriber) => {
                         let stream = Arc::clone(&kara_transcriber.recogniser());
@@ -202,7 +200,7 @@ pub fn init_audio_sender(
                         if let Err(e) = stt_proxy.send_event(KaraEvents::ProcessCommand(results)) {
                             error!("{e}");
                         } else {
-                            is_processing.lock().unwrap().store(true, Ordering::Relaxed);
+                            is_processing.store(true, Ordering::Relaxed);
                             tracing::trace!("channel");
                         }
                     }
@@ -213,7 +211,7 @@ pub fn init_audio_sender(
         }
     });
 }
-fn send_to_visualiser(data: &[f32], sender: mpsc::Sender<Event>) {
+fn send_to_visualiser(data: &[f32], sender: crossbeam_channel::Sender<Event>) {
     // sends the raw data to audio_stream via the event_sender
     sender.send(Event::SendData(data.to_vec())).unwrap();
 }
@@ -221,3 +219,5 @@ fn send_to_visualiser(data: &[f32], sender: mpsc::Sender<Event>) {
 fn err_fn(err: cpal::StreamError) {
     error!("an error occurred on stream: {}", err);
 }
+
+pub use crossbeam_channel;
