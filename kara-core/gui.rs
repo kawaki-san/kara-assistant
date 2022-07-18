@@ -396,7 +396,7 @@ mod controls {
                     .padding(10)
                     .push(
                         Text::new(&self.text)
-                            //.color(Color::new(0.949_019_6, 0.898_039_2, 0.737_254_9, 1.0))
+                            .style(Color::new(0.949_019_6, 0.898_039_2, 0.737_254_9, 1.0))
                             .size(28),
                     ),
             )
