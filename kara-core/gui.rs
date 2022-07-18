@@ -12,15 +12,12 @@ use iced_wgpu::{
         Backends, CommandEncoderDescriptor, DeviceDescriptor, Features, Instance, Limits,
         PresentMode, SurfaceConfiguration, SurfaceError, TextureUsages, TextureViewDescriptor,
     },
-    Backend, Renderer, Settings, Viewport,
+    Backend, Color, Renderer, Settings, Viewport,
 };
 use iced_winit::{
     conversion,
-    futures::{
-        executor::{self, LocalPool},
-        task::SpawnExt,
-    },
-    program,
+    futures::executor,
+    program, renderer,
     winit::{
         dpi::PhysicalPosition,
         event::{Event, ModifiersState, WindowEvent},
@@ -63,10 +60,7 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     window.set_decorations(config.window.decorations);
     let physical_size = window.inner_size();
     let mut viewport = Viewport::with_physical_size(
-        iced_winit::Size {
-            width: physical_size.width,
-            height: physical_size.height,
-        },
+        iced_winit::Size::new(physical_size.width, physical_size.height),
         window.scale_factor(),
     );
     let mut cursor_position = PhysicalPosition::new(-1.0, -1.0);
@@ -101,7 +95,9 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                     let needed_limits = Limits::default();
                     (
                         inner_surface
-                            .get_preferred_format(&adapter)
+                            .get_supported_formats(&adapter)
+                            .first()
+                            .copied()
                             .expect("get preferred format"),
                         adapter
                             .request_device(
@@ -136,7 +132,6 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
 
     // Initialise staging belt and local pool
     let mut staging_belt = StagingBelt::new(5 * 1024);
-    let mut local_pool = LocalPool::new();
 
     // Initialise scene
     let scene = Scene::new(&device, format);
@@ -192,6 +187,10 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                         viewport.logical_size(),
                         conversion::cursor_position(cursor_position, viewport.scale_factor()),
                         &mut renderer,
+                        &iced_wgpu::Theme::Dark,
+                        &renderer::Style {
+                            text_color: Color::WHITE,
+                        },
                         &mut clipboard,
                         &mut debug,
                     );
@@ -288,9 +287,9 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
 
                         // Then we submit the work
                         staging_belt.finish();
-                        //                 queue.submit(Some(encoder.finish()));
+                        queue.submit(Some(encoder.finish()));
 
-                        queue.submit(std::iter::once(encoder.finish()));
+                        // queue.submit(std::iter::once(encoder.finish()));
                         frame.present();
 
                         // Update the mouse cursor
@@ -298,13 +297,7 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                             state.mouse_interaction(),
                         ));
 
-                        // And recall staging buffers
-                        local_pool
-                            .spawner()
-                            .spawn(staging_belt.recall())
-                            .expect("Recall staging buffers");
-
-                        local_pool.run_until_stalled();
+                        staging_belt.recall();
                     }
                     Err(error) => match error {
                         SurfaceError::OutOfMemory => {
@@ -403,7 +396,7 @@ mod controls {
                     .padding(10)
                     .push(
                         Text::new(&self.text)
-                            .color(Color::new(0.949_019_6, 0.898_039_2, 0.737_254_9, 1.0))
+                            //.color(Color::new(0.949_019_6, 0.898_039_2, 0.737_254_9, 1.0))
                             .size(28),
                     ),
             )
@@ -440,7 +433,7 @@ mod scene {
         ) -> wgpu::RenderPass<'a> {
             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: None,
-                color_attachments: &[wgpu::RenderPassColorAttachment {
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: target,
                     resolve_target: None,
                     ops: wgpu::Operations {
@@ -456,7 +449,7 @@ mod scene {
                         }),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: None,
             })
         }
@@ -481,7 +474,7 @@ mod scene {
         texture_format: wgpu::TextureFormat,
     ) -> wgpu::RenderPipeline {
         let shader_module =
-            device.create_shader_module(&wgpu::include_wgsl!("../kara-assets/wgpu/shader.wgsl"));
+            device.create_shader_module(wgpu::include_wgsl!("../kara-assets/wgpu/shader.wgsl"));
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[],
@@ -501,7 +494,7 @@ mod scene {
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
                 entry_point: "fragment_main",
-                targets: &[texture_format.into()],
+                targets: &[Some(texture_format.into())],
             }),
             multiview: None,
         })
