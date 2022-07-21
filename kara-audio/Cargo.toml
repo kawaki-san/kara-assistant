@@ -23,4 +23,3 @@ futures-util = "0.3.21"
 indicatif = "0.16.2"
 zip = "0.6.2"
 crossbeam-channel = "0.5.5"
-kara-nlu = { path = "../kara-nlu/" }

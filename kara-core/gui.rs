@@ -363,13 +363,12 @@ pub async fn start(
                             ));
                             val.parse_text(transcription)
                         }
-                        Model::Initialising => {
-                            println!("initialising");
-                        }
+                        Model::Initialising => {}
                     }
 
                     // process command here;
                     inner_is_processing.store(false, Ordering::Relaxed);
+                    // NOTE: Reset is_awake to false
                     inner_is_awake.store(true, Ordering::Relaxed)
                     // listen for wake word to start transcription again
                 }

@@ -1790,7 +1790,6 @@ dependencies = [
  "gag",
  "iced_winit",
  "indicatif",
- "kara-nlu",
  "reqwest",
  "rubato",
  "rustfft",
