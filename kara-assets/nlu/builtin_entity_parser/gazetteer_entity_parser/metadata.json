@@ -1,0 +1,20 @@
+{
+  "parsers_metadata": [
+    {
+      "entity_identifier": "snips/musicAlbum",
+      "entity_parser": "parser_1"
+    },
+    {
+      "entity_identifier": "snips/musicArtist",
+      "entity_parser": "parser_2"
+    },
+    {
+      "entity_identifier": "snips/musicTrack",
+      "entity_parser": "parser_3"
+    },
+    {
+      "entity_identifier": "snips/region",
+      "entity_parser": "parser_4"
+    }
+  ]
+}

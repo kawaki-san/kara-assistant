@@ -1,0 +1,461 @@
+{
+  "config": {
+    "intent_classifier_config": {
+      "data_augmentation_config": {
+        "add_builtin_entities_examples": false,
+        "max_unknown_words": null,
+        "min_utterances": 20,
+        "noise_factor": 5,
+        "unknown_word_prob": 0.0,
+        "unknown_words_replacement_string": null
+      },
+      "featurizer_config": {
+        "added_cooccurrence_feature_ratio": 0.0,
+        "cooccurrence_vectorizer_config": {
+          "filter_stop_words": true,
+          "keep_order": true,
+          "unit_name": "cooccurrence_vectorizer",
+          "unknown_words_replacement_string": null,
+          "window_size": null
+        },
+        "pvalue_threshold": 0.4,
+        "tfidf_vectorizer_config": {
+          "unit_name": "tfidf_vectorizer",
+          "use_stemming": false,
+          "word_clusters_name": null
+        },
+        "unit_name": "featurizer"
+      },
+      "noise_reweight_factor": 1,
+      "unit_name": "log_reg_intent_classifier"
+    },
+    "slot_filler_config": {
+      "crf_args": {
+        "algorithm": "lbfgs",
+        "c1": 0.1,
+        "c2": 0.1
+      },
+      "data_augmentation_config": {
+        "add_builtin_entities_examples": true,
+        "capitalization_ratio": 0.2,
+        "min_utterances": 200
+      },
+      "feature_factory_configs": [
+        {
+          "args": {
+            "common_words_gazetteer_name": "top_10000_words_stemmed",
+            "n": 1,
+            "use_stemming": true
+          },
+          "factory_name": "ngram",
+          "offsets": [
+            -2,
+            -1,
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "args": {
+            "common_words_gazetteer_name": "top_10000_words_stemmed",
+            "n": 2,
+            "use_stemming": true
+          },
+          "factory_name": "ngram",
+          "offsets": [
+            -2,
+            1
+          ]
+        },
+        {
+          "args": {},
+          "factory_name": "is_digit",
+          "offsets": [
+            -1,
+            0,
+            1
+          ]
+        },
+        {
+          "args": {},
+          "factory_name": "is_first",
+          "offsets": [
+            -2,
+            -1,
+            0
+          ]
+        },
+        {
+          "args": {},
+          "factory_name": "is_last",
+          "offsets": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "args": {
+            "n": 1
+          },
+          "factory_name": "shape_ngram",
+          "offsets": [
+            0
+          ]
+        },
+        {
+          "args": {
+            "n": 2
+          },
+          "factory_name": "shape_ngram",
+          "offsets": [
+            -1,
+            0
+          ]
+        },
+        {
+          "args": {
+            "n": 3
+          },
+          "factory_name": "shape_ngram",
+          "offsets": [
+            -1
+          ]
+        },
+        {
+          "args": {
+            "entity_filter": {
+              "automatically_extensible": false
+            },
+            "tagging_scheme_code": 2,
+            "use_stemming": true
+          },
+          "factory_name": "entity_match",
+          "offsets": [
+            -2,
+            -1,
+            0
+          ]
+        },
+        {
+          "args": {
+            "entity_filter": {
+              "automatically_extensible": true
+            },
+            "tagging_scheme_code": 2,
+            "use_stemming": true
+          },
+          "drop_out": 0.5,
+          "factory_name": "entity_match",
+          "offsets": [
+            -2,
+            -1,
+            0
+          ]
+        },
+        {
+          "args": {
+            "tagging_scheme_code": 1
+          },
+          "factory_name": "builtin_entity_match",
+          "offsets": [
+            -2,
+            -1,
+            0
+          ]
+        },
+        {
+          "args": {
+            "cluster_name": "brown_clusters",
+            "use_stemming": false
+          },
+          "factory_name": "word_cluster",
+          "offsets": [
+            -2,
+            -1,
+            0,
+            1
+          ]
+        }
+      ],
+      "tagging_scheme": 1,
+      "unit_name": "crf_slot_filler"
+    },
+    "unit_name": "probabilistic_intent_parser"
+  },
+  "slot_fillers": [
+    {
+      "intent": "alarm_query",
+      "slot_filler_name": "slot_filler_0"
+    },
+    {
+      "intent": "alarm_remove",
+      "slot_filler_name": "slot_filler_1"
+    },
+    {
+      "intent": "alarm_set",
+      "slot_filler_name": "slot_filler_2"
+    },
+    {
+      "intent": "audio_volume_down",
+      "slot_filler_name": "slot_filler_3"
+    },
+    {
+      "intent": "audio_volume_mute",
+      "slot_filler_name": "slot_filler_4"
+    },
+    {
+      "intent": "audio_volume_other",
+      "slot_filler_name": "slot_filler_5"
+    },
+    {
+      "intent": "audio_volume_up",
+      "slot_filler_name": "slot_filler_6"
+    },
+    {
+      "intent": "calendar_query",
+      "slot_filler_name": "slot_filler_7"
+    },
+    {
+      "intent": "calendar_remove",
+      "slot_filler_name": "slot_filler_8"
+    },
+    {
+      "intent": "calendar_set",
+      "slot_filler_name": "slot_filler_9"
+    },
+    {
+      "intent": "cooking_query",
+      "slot_filler_name": "slot_filler_10"
+    },
+    {
+      "intent": "cooking_recipe",
+      "slot_filler_name": "slot_filler_11"
+    },
+    {
+      "intent": "datetime_convert",
+      "slot_filler_name": "slot_filler_12"
+    },
+    {
+      "intent": "datetime_query",
+      "slot_filler_name": "slot_filler_13"
+    },
+    {
+      "intent": "email_addcontact",
+      "slot_filler_name": "slot_filler_14"
+    },
+    {
+      "intent": "email_query",
+      "slot_filler_name": "slot_filler_15"
+    },
+    {
+      "intent": "email_querycontact",
+      "slot_filler_name": "slot_filler_16"
+    },
+    {
+      "intent": "email_sendemail",
+      "slot_filler_name": "slot_filler_17"
+    },
+    {
+      "intent": "general_affirm",
+      "slot_filler_name": "slot_filler_18"
+    },
+    {
+      "intent": "general_commandstop",
+      "slot_filler_name": "slot_filler_19"
+    },
+    {
+      "intent": "general_confirm",
+      "slot_filler_name": "slot_filler_20"
+    },
+    {
+      "intent": "general_dontcare",
+      "slot_filler_name": "slot_filler_21"
+    },
+    {
+      "intent": "general_explain",
+      "slot_filler_name": "slot_filler_22"
+    },
+    {
+      "intent": "general_greet",
+      "slot_filler_name": "slot_filler_23"
+    },
+    {
+      "intent": "general_joke",
+      "slot_filler_name": "slot_filler_24"
+    },
+    {
+      "intent": "general_negate",
+      "slot_filler_name": "slot_filler_25"
+    },
+    {
+      "intent": "general_praise",
+      "slot_filler_name": "slot_filler_26"
+    },
+    {
+      "intent": "general_quirky",
+      "slot_filler_name": "slot_filler_27"
+    },
+    {
+      "intent": "general_repeat",
+      "slot_filler_name": "slot_filler_28"
+    },
+    {
+      "intent": "iot_cleaning",
+      "slot_filler_name": "slot_filler_29"
+    },
+    {
+      "intent": "iot_coffee",
+      "slot_filler_name": "slot_filler_30"
+    },
+    {
+      "intent": "iot_hue_lightchange",
+      "slot_filler_name": "slot_filler_31"
+    },
+    {
+      "intent": "iot_hue_lightdim",
+      "slot_filler_name": "slot_filler_32"
+    },
+    {
+      "intent": "iot_hue_lightoff",
+      "slot_filler_name": "slot_filler_33"
+    },
+    {
+      "intent": "iot_hue_lighton",
+      "slot_filler_name": "slot_filler_34"
+    },
+    {
+      "intent": "iot_hue_lightup",
+      "slot_filler_name": "slot_filler_35"
+    },
+    {
+      "intent": "iot_wemo_off",
+      "slot_filler_name": "slot_filler_36"
+    },
+    {
+      "intent": "iot_wemo_on",
+      "slot_filler_name": "slot_filler_37"
+    },
+    {
+      "intent": "lists_createoradd",
+      "slot_filler_name": "slot_filler_38"
+    },
+    {
+      "intent": "lists_query",
+      "slot_filler_name": "slot_filler_39"
+    },
+    {
+      "intent": "lists_remove",
+      "slot_filler_name": "slot_filler_40"
+    },
+    {
+      "intent": "music_dislikeness",
+      "slot_filler_name": "slot_filler_41"
+    },
+    {
+      "intent": "music_likeness",
+      "slot_filler_name": "slot_filler_42"
+    },
+    {
+      "intent": "music_query",
+      "slot_filler_name": "slot_filler_43"
+    },
+    {
+      "intent": "music_settings",
+      "slot_filler_name": "slot_filler_44"
+    },
+    {
+      "intent": "news_query",
+      "slot_filler_name": "slot_filler_45"
+    },
+    {
+      "intent": "play_audiobook",
+      "slot_filler_name": "slot_filler_46"
+    },
+    {
+      "intent": "play_game",
+      "slot_filler_name": "slot_filler_47"
+    },
+    {
+      "intent": "play_music",
+      "slot_filler_name": "slot_filler_48"
+    },
+    {
+      "intent": "play_podcasts",
+      "slot_filler_name": "slot_filler_49"
+    },
+    {
+      "intent": "play_radio",
+      "slot_filler_name": "slot_filler_50"
+    },
+    {
+      "intent": "qa_currency",
+      "slot_filler_name": "slot_filler_51"
+    },
+    {
+      "intent": "qa_definition",
+      "slot_filler_name": "slot_filler_52"
+    },
+    {
+      "intent": "qa_factoid",
+      "slot_filler_name": "slot_filler_53"
+    },
+    {
+      "intent": "qa_maths",
+      "slot_filler_name": "slot_filler_54"
+    },
+    {
+      "intent": "qa_stock",
+      "slot_filler_name": "slot_filler_55"
+    },
+    {
+      "intent": "recommendation_events",
+      "slot_filler_name": "slot_filler_56"
+    },
+    {
+      "intent": "recommendation_locations",
+      "slot_filler_name": "slot_filler_57"
+    },
+    {
+      "intent": "recommendation_movies",
+      "slot_filler_name": "slot_filler_58"
+    },
+    {
+      "intent": "social_post",
+      "slot_filler_name": "slot_filler_59"
+    },
+    {
+      "intent": "social_query",
+      "slot_filler_name": "slot_filler_60"
+    },
+    {
+      "intent": "takeaway_order",
+      "slot_filler_name": "slot_filler_61"
+    },
+    {
+      "intent": "takeaway_query",
+      "slot_filler_name": "slot_filler_62"
+    },
+    {
+      "intent": "transport_query",
+      "slot_filler_name": "slot_filler_63"
+    },
+    {
+      "intent": "transport_taxi",
+      "slot_filler_name": "slot_filler_64"
+    },
+    {
+      "intent": "transport_ticket",
+      "slot_filler_name": "slot_filler_65"
+    },
+    {
+      "intent": "transport_traffic",
+      "slot_filler_name": "slot_filler_66"
+    },
+    {
+      "intent": "weather_query",
+      "slot_filler_name": "slot_filler_67"
+    }
+  ]
+}

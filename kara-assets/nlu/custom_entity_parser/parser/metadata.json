@@ -1,0 +1,200 @@
+{
+  "parsers_metadata": [
+    {
+      "entity_identifier": "alarm_type",
+      "entity_parser": "parser_1"
+    },
+    {
+      "entity_identifier": "app_name",
+      "entity_parser": "parser_2"
+    },
+    {
+      "entity_identifier": "audiobook_author",
+      "entity_parser": "parser_3"
+    },
+    {
+      "entity_identifier": "audiobook_name",
+      "entity_parser": "parser_4"
+    },
+    {
+      "entity_identifier": "business_name",
+      "entity_parser": "parser_5"
+    },
+    {
+      "entity_identifier": "business_type",
+      "entity_parser": "parser_6"
+    },
+    {
+      "entity_identifier": "change_amount",
+      "entity_parser": "parser_7"
+    },
+    {
+      "entity_identifier": "coffee_type",
+      "entity_parser": "parser_8"
+    },
+    {
+      "entity_identifier": "color_type",
+      "entity_parser": "parser_9"
+    },
+    {
+      "entity_identifier": "cooking_type",
+      "entity_parser": "parser_10"
+    },
+    {
+      "entity_identifier": "currency_name",
+      "entity_parser": "parser_11"
+    },
+    {
+      "entity_identifier": "definition_word",
+      "entity_parser": "parser_12"
+    },
+    {
+      "entity_identifier": "device_type",
+      "entity_parser": "parser_13"
+    },
+    {
+      "entity_identifier": "drink_type",
+      "entity_parser": "parser_14"
+    },
+    {
+      "entity_identifier": "email_address",
+      "entity_parser": "parser_15"
+    },
+    {
+      "entity_identifier": "email_folder",
+      "entity_parser": "parser_16"
+    },
+    {
+      "entity_identifier": "event_name",
+      "entity_parser": "parser_17"
+    },
+    {
+      "entity_identifier": "food_type",
+      "entity_parser": "parser_18"
+    },
+    {
+      "entity_identifier": "game_name",
+      "entity_parser": "parser_19"
+    },
+    {
+      "entity_identifier": "game_type",
+      "entity_parser": "parser_20"
+    },
+    {
+      "entity_identifier": "general_frequency",
+      "entity_parser": "parser_21"
+    },
+    {
+      "entity_identifier": "house_place",
+      "entity_parser": "parser_22"
+    },
+    {
+      "entity_identifier": "ingredient",
+      "entity_parser": "parser_23"
+    },
+    {
+      "entity_identifier": "joke_type",
+      "entity_parser": "parser_24"
+    },
+    {
+      "entity_identifier": "list_name",
+      "entity_parser": "parser_25"
+    },
+    {
+      "entity_identifier": "meal_type",
+      "entity_parser": "parser_26"
+    },
+    {
+      "entity_identifier": "media_type",
+      "entity_parser": "parser_27"
+    },
+    {
+      "entity_identifier": "movie_name",
+      "entity_parser": "parser_28"
+    },
+    {
+      "entity_identifier": "movie_type",
+      "entity_parser": "parser_29"
+    },
+    {
+      "entity_identifier": "music_descriptor",
+      "entity_parser": "parser_30"
+    },
+    {
+      "entity_identifier": "music_genre",
+      "entity_parser": "parser_31"
+    },
+    {
+      "entity_identifier": "news_topic",
+      "entity_parser": "parser_32"
+    },
+    {
+      "entity_identifier": "order_type",
+      "entity_parser": "parser_33"
+    },
+    {
+      "entity_identifier": "person",
+      "entity_parser": "parser_34"
+    },
+    {
+      "entity_identifier": "personal_info",
+      "entity_parser": "parser_35"
+    },
+    {
+      "entity_identifier": "player_setting",
+      "entity_parser": "parser_36"
+    },
+    {
+      "entity_identifier": "playlist_name",
+      "entity_parser": "parser_37"
+    },
+    {
+      "entity_identifier": "podcast_descriptor",
+      "entity_parser": "parser_38"
+    },
+    {
+      "entity_identifier": "podcast_name",
+      "entity_parser": "parser_39"
+    },
+    {
+      "entity_identifier": "query_detail",
+      "entity_parser": "parser_40"
+    },
+    {
+      "entity_identifier": "radio_name",
+      "entity_parser": "parser_41"
+    },
+    {
+      "entity_identifier": "relation",
+      "entity_parser": "parser_42"
+    },
+    {
+      "entity_identifier": "sport_type",
+      "entity_parser": "parser_43"
+    },
+    {
+      "entity_identifier": "time_zone",
+      "entity_parser": "parser_44"
+    },
+    {
+      "entity_identifier": "transport_agency",
+      "entity_parser": "parser_45"
+    },
+    {
+      "entity_identifier": "transport_descriptor",
+      "entity_parser": "parser_46"
+    },
+    {
+      "entity_identifier": "transport_name",
+      "entity_parser": "parser_47"
+    },
+    {
+      "entity_identifier": "transport_type",
+      "entity_parser": "parser_48"
+    },
+    {
+      "entity_identifier": "weather_descriptor",
+      "entity_parser": "parser_49"
+    }
+  ]
+}

@@ -1,0 +1,985 @@
+{
+  "builtin_entity_parser": "builtin_entity_parser",
+  "config": {
+    "intent_parsers_configs": [
+      {
+        "ignore_stop_words": true,
+        "unit_name": "lookup_intent_parser"
+      },
+      {
+        "intent_classifier_config": {
+          "data_augmentation_config": {
+            "add_builtin_entities_examples": false,
+            "max_unknown_words": null,
+            "min_utterances": 20,
+            "noise_factor": 5,
+            "unknown_word_prob": 0.0,
+            "unknown_words_replacement_string": null
+          },
+          "featurizer_config": {
+            "added_cooccurrence_feature_ratio": 0.0,
+            "cooccurrence_vectorizer_config": {
+              "filter_stop_words": true,
+              "keep_order": true,
+              "unit_name": "cooccurrence_vectorizer",
+              "unknown_words_replacement_string": null,
+              "window_size": null
+            },
+            "pvalue_threshold": 0.4,
+            "tfidf_vectorizer_config": {
+              "unit_name": "tfidf_vectorizer",
+              "use_stemming": false,
+              "word_clusters_name": null
+            },
+            "unit_name": "featurizer"
+          },
+          "noise_reweight_factor": 1,
+          "unit_name": "log_reg_intent_classifier"
+        },
+        "slot_filler_config": {
+          "crf_args": {
+            "algorithm": "lbfgs",
+            "c1": 0.1,
+            "c2": 0.1
+          },
+          "data_augmentation_config": {
+            "add_builtin_entities_examples": true,
+            "capitalization_ratio": 0.2,
+            "min_utterances": 200
+          },
+          "feature_factory_configs": [
+            {
+              "args": {
+                "common_words_gazetteer_name": "top_10000_words_stemmed",
+                "n": 1,
+                "use_stemming": true
+              },
+              "factory_name": "ngram",
+              "offsets": [
+                -2,
+                -1,
+                0,
+                1,
+                2
+              ]
+            },
+            {
+              "args": {
+                "common_words_gazetteer_name": "top_10000_words_stemmed",
+                "n": 2,
+                "use_stemming": true
+              },
+              "factory_name": "ngram",
+              "offsets": [
+                -2,
+                1
+              ]
+            },
+            {
+              "args": {},
+              "factory_name": "is_digit",
+              "offsets": [
+                -1,
+                0,
+                1
+              ]
+            },
+            {
+              "args": {},
+              "factory_name": "is_first",
+              "offsets": [
+                -2,
+                -1,
+                0
+              ]
+            },
+            {
+              "args": {},
+              "factory_name": "is_last",
+              "offsets": [
+                0,
+                1,
+                2
+              ]
+            },
+            {
+              "args": {
+                "n": 1
+              },
+              "factory_name": "shape_ngram",
+              "offsets": [
+                0
+              ]
+            },
+            {
+              "args": {
+                "n": 2
+              },
+              "factory_name": "shape_ngram",
+              "offsets": [
+                -1,
+                0
+              ]
+            },
+            {
+              "args": {
+                "n": 3
+              },
+              "factory_name": "shape_ngram",
+              "offsets": [
+                -1
+              ]
+            },
+            {
+              "args": {
+                "entity_filter": {
+                  "automatically_extensible": false
+                },
+                "tagging_scheme_code": 2,
+                "use_stemming": true
+              },
+              "factory_name": "entity_match",
+              "offsets": [
+                -2,
+                -1,
+                0
+              ]
+            },
+            {
+              "args": {
+                "entity_filter": {
+                  "automatically_extensible": true
+                },
+                "tagging_scheme_code": 2,
+                "use_stemming": true
+              },
+              "drop_out": 0.5,
+              "factory_name": "entity_match",
+              "offsets": [
+                -2,
+                -1,
+                0
+              ]
+            },
+            {
+              "args": {
+                "tagging_scheme_code": 1
+              },
+              "factory_name": "builtin_entity_match",
+              "offsets": [
+                -2,
+                -1,
+                0
+              ]
+            },
+            {
+              "args": {
+                "cluster_name": "brown_clusters",
+                "use_stemming": false
+              },
+              "factory_name": "word_cluster",
+              "offsets": [
+                -2,
+                -1,
+                0,
+                1
+              ]
+            }
+          ],
+          "tagging_scheme": 1,
+          "unit_name": "crf_slot_filler"
+        },
+        "unit_name": "probabilistic_intent_parser"
+      }
+    ],
+    "unit_name": "nlu_engine"
+  },
+  "custom_entity_parser": "custom_entity_parser",
+  "dataset_metadata": {
+    "entities": {
+      "alarm_type": {
+        "automatically_extensible": true
+      },
+      "app_name": {
+        "automatically_extensible": true
+      },
+      "audiobook_author": {
+        "automatically_extensible": true
+      },
+      "audiobook_name": {
+        "automatically_extensible": true
+      },
+      "business_name": {
+        "automatically_extensible": true
+      },
+      "business_type": {
+        "automatically_extensible": true
+      },
+      "change_amount": {
+        "automatically_extensible": true
+      },
+      "coffee_type": {
+        "automatically_extensible": true
+      },
+      "color_type": {
+        "automatically_extensible": true
+      },
+      "cooking_type": {
+        "automatically_extensible": true
+      },
+      "currency_name": {
+        "automatically_extensible": true
+      },
+      "definition_word": {
+        "automatically_extensible": true
+      },
+      "device_type": {
+        "automatically_extensible": true
+      },
+      "drink_type": {
+        "automatically_extensible": true
+      },
+      "email_address": {
+        "automatically_extensible": true
+      },
+      "email_folder": {
+        "automatically_extensible": true
+      },
+      "event_name": {
+        "automatically_extensible": true
+      },
+      "food_type": {
+        "automatically_extensible": true
+      },
+      "game_name": {
+        "automatically_extensible": true
+      },
+      "game_type": {
+        "automatically_extensible": true
+      },
+      "general_frequency": {
+        "automatically_extensible": true
+      },
+      "house_place": {
+        "automatically_extensible": true
+      },
+      "ingredient": {
+        "automatically_extensible": true
+      },
+      "joke_type": {
+        "automatically_extensible": true
+      },
+      "list_name": {
+        "automatically_extensible": true
+      },
+      "meal_type": {
+        "automatically_extensible": true
+      },
+      "media_type": {
+        "automatically_extensible": true
+      },
+      "movie_name": {
+        "automatically_extensible": true
+      },
+      "movie_type": {
+        "automatically_extensible": true
+      },
+      "music_descriptor": {
+        "automatically_extensible": true
+      },
+      "music_genre": {
+        "automatically_extensible": true
+      },
+      "news_topic": {
+        "automatically_extensible": true
+      },
+      "order_type": {
+        "automatically_extensible": true
+      },
+      "person": {
+        "automatically_extensible": true
+      },
+      "personal_info": {
+        "automatically_extensible": true
+      },
+      "player_setting": {
+        "automatically_extensible": true
+      },
+      "playlist_name": {
+        "automatically_extensible": true
+      },
+      "podcast_descriptor": {
+        "automatically_extensible": true
+      },
+      "podcast_name": {
+        "automatically_extensible": true
+      },
+      "query_detail": {
+        "automatically_extensible": true
+      },
+      "radio_name": {
+        "automatically_extensible": true
+      },
+      "relation": {
+        "automatically_extensible": true
+      },
+      "sport_type": {
+        "automatically_extensible": true
+      },
+      "time_zone": {
+        "automatically_extensible": true
+      },
+      "transport_agency": {
+        "automatically_extensible": true
+      },
+      "transport_descriptor": {
+        "automatically_extensible": true
+      },
+      "transport_name": {
+        "automatically_extensible": true
+      },
+      "transport_type": {
+        "automatically_extensible": true
+      },
+      "weather_descriptor": {
+        "automatically_extensible": true
+      }
+    },
+    "language_code": "en",
+    "slot_name_mappings": {
+      "alarm_query": {
+        "alarm_type": "alarm_type",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "event_name": "event_name",
+        "house_place": "house_place",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "alarm_remove": {
+        "alarm_type": "alarm_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "person": "person",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "alarm_set": {
+        "alarm_type": "alarm_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "media_type": "media_type",
+        "order_type": "order_type",
+        "person": "person",
+        "relation": "relation",
+        "time": "snips/time",
+        "time_zone": "time_zone",
+        "timeofday": "snips/time"
+      },
+      "audio_volume_down": {
+        "change_amount": "snips/percentage",
+        "device_type": "device_type"
+      },
+      "audio_volume_mute": {
+        "change_amount": "change_amount",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "event_name": "event_name",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "audio_volume_other": {
+        "change_amount": "change_amount"
+      },
+      "audio_volume_up": {
+        "change_amount": "change_amount",
+        "device_type": "device_type",
+        "media_type": "media_type",
+        "song_name": "snips/musicTrack"
+      },
+      "calendar_query": {
+        "business_name": "business_name",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "sport_type": "sport_type",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "calendar_remove": {
+        "app_name": "app_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "calendar_set": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "house_place": "house_place",
+        "meal_type": "meal_type",
+        "media_type": "media_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "sport_type": "sport_type",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "cooking_query": {
+        "food_type": "food_type",
+        "meal_type": "meal_type"
+      },
+      "cooking_recipe": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "cooking_type": "cooking_type",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "drink_type": "drink_type",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "ingredient": "ingredient",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "media_type": "media_type",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "datetime_convert": {
+        "person": "person",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "time_zone": "time_zone",
+        "timeofday": "snips/time"
+      },
+      "datetime_query": {
+        "date": "snips/date",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "time_zone": "time_zone",
+        "timeofday": "snips/time"
+      },
+      "email_addcontact": {
+        "business_name": "business_name",
+        "email_address": "email_address",
+        "list_name": "list_name",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "relation": "relation"
+      },
+      "email_query": {
+        "business_name": "business_name",
+        "date": "snips/date",
+        "email_folder": "email_folder",
+        "event_name": "event_name",
+        "person": "person",
+        "personal_info": "personal_info",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "email_querycontact": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "event_name": "event_name",
+        "list_name": "list_name",
+        "media_type": "media_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time"
+      },
+      "email_sendemail": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "business_name": "business_name",
+        "date": "snips/date",
+        "email_address": "email_address",
+        "email_folder": "email_folder",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "meal_type": "meal_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "general_affirm": {},
+      "general_commandstop": {},
+      "general_confirm": {},
+      "general_dontcare": {},
+      "general_explain": {},
+      "general_greet": {
+        "date": "snips/date"
+      },
+      "general_joke": {
+        "business_type": "business_type",
+        "date": "snips/date",
+        "food_type": "food_type",
+        "joke_type": "joke_type",
+        "person": "person",
+        "relation": "relation"
+      },
+      "general_negate": {},
+      "general_praise": {},
+      "general_quirky": {
+        "artist_name": "snips/musicArtist",
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "definition_word": "definition_word",
+        "device_type": "device_type",
+        "drink_type": "drink_type",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "general_frequency": "general_frequency",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "media_type": "media_type",
+        "movie_name": "movie_name",
+        "news_topic": "news_topic",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "general_repeat": {},
+      "iot_cleaning": {
+        "date": "snips/date",
+        "device_type": "device_type",
+        "general_frequency": "general_frequency",
+        "house_place": "house_place",
+        "place_name": "snips/region",
+        "time": "snips/time"
+      },
+      "iot_coffee": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "coffee_type": "coffee_type",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "person": "person",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "iot_hue_lightchange": {
+        "change_amount": "snips/percentage",
+        "color_type": "color_type",
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "player_setting": "player_setting",
+        "time": "snips/time"
+      },
+      "iot_hue_lightdim": {
+        "change_amount": "change_amount",
+        "color_type": "color_type",
+        "device_type": "device_type",
+        "house_place": "house_place"
+      },
+      "iot_hue_lightoff": {
+        "color_type": "color_type",
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "time": "snips/time"
+      },
+      "iot_hue_lighton": {
+        "device_type": "device_type",
+        "house_place": "house_place"
+      },
+      "iot_hue_lightup": {
+        "change_amount": "change_amount",
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "time": "snips/time"
+      },
+      "iot_wemo_off": {
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "time": "snips/time"
+      },
+      "iot_wemo_on": {
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "relation": "relation"
+      },
+      "lists_createoradd": {
+        "date": "snips/date",
+        "drink_type": "drink_type",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "list_name": "list_name",
+        "media_type": "media_type",
+        "music_descriptor": "music_descriptor",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time"
+      },
+      "lists_query": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "event_name": "event_name",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "music_genre": "music_genre",
+        "person": "person",
+        "place_name": "snips/region",
+        "timeofday": "snips/time"
+      },
+      "lists_remove": {
+        "business_name": "business_name",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "list_name": "list_name",
+        "meal_type": "meal_type",
+        "media_type": "media_type",
+        "music_descriptor": "music_descriptor",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "song_name": "snips/musicTrack",
+        "timeofday": "snips/time"
+      },
+      "music_dislikeness": {
+        "music_descriptor": "music_descriptor",
+        "music_genre": "music_genre"
+      },
+      "music_likeness": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "music_descriptor": "music_descriptor",
+        "music_genre": "music_genre",
+        "place_name": "snips/region",
+        "player_setting": "player_setting",
+        "playlist_name": "playlist_name",
+        "song_name": "snips/musicTrack"
+      },
+      "music_query": {
+        "artist_name": "snips/musicArtist",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "media_type": "media_type",
+        "music_album": "snips/musicAlbum",
+        "music_genre": "music_genre",
+        "person": "person",
+        "player_setting": "player_setting",
+        "song_name": "snips/musicTrack",
+        "timeofday": "snips/time"
+      },
+      "music_settings": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "device_type": "device_type",
+        "media_type": "media_type",
+        "music_descriptor": "music_descriptor",
+        "music_genre": "music_genre",
+        "player_setting": "player_setting",
+        "playlist_name": "playlist_name",
+        "song_name": "snips/musicTrack"
+      },
+      "news_query": {
+        "artist_name": "snips/musicArtist",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "general_frequency": "general_frequency",
+        "media_type": "media_type",
+        "news_topic": "news_topic",
+        "person": "person",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "transport_type": "transport_type"
+      },
+      "play_audiobook": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "audiobook_author": "audiobook_author",
+        "audiobook_name": "audiobook_name",
+        "date": "snips/date",
+        "list_name": "list_name",
+        "media_type": "media_type",
+        "player_setting": "player_setting",
+        "song_name": "snips/musicTrack",
+        "time": "snips/time"
+      },
+      "play_game": {
+        "device_type": "device_type",
+        "game_name": "game_name",
+        "game_type": "game_type"
+      },
+      "play_music": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "media_type": "media_type",
+        "movie_name": "movie_name",
+        "music_album": "snips/musicAlbum",
+        "music_descriptor": "music_descriptor",
+        "music_genre": "music_genre",
+        "player_setting": "player_setting",
+        "playlist_name": "playlist_name",
+        "song_name": "snips/musicTrack",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "play_podcasts": {
+        "date": "snips/date",
+        "media_type": "media_type",
+        "person": "person",
+        "place_name": "snips/region",
+        "player_setting": "player_setting",
+        "podcast_descriptor": "podcast_descriptor",
+        "podcast_name": "podcast_name",
+        "radio_name": "radio_name",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "transport_type": "transport_type"
+      },
+      "play_radio": {
+        "app_name": "app_name",
+        "artist_name": "snips/musicArtist",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "house_place": "house_place",
+        "media_type": "media_type",
+        "music_album": "snips/musicAlbum",
+        "music_descriptor": "music_descriptor",
+        "music_genre": "music_genre",
+        "person": "person",
+        "radio_name": "radio_name",
+        "relation": "relation",
+        "song_name": "snips/musicTrack",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "qa_currency": {
+        "business_name": "business_name",
+        "currency_name": "currency_name",
+        "date": "snips/date",
+        "place_name": "snips/region"
+      },
+      "qa_definition": {
+        "definition_word": "definition_word"
+      },
+      "qa_factoid": {
+        "artist_name": "snips/musicArtist",
+        "business_name": "business_name",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "list_name": "list_name",
+        "media_type": "media_type",
+        "movie_name": "movie_name",
+        "music_genre": "music_genre",
+        "news_topic": "news_topic",
+        "person": "person",
+        "place_name": "snips/region",
+        "time": "snips/time"
+      },
+      "qa_maths": {
+        "date": "snips/date",
+        "general_frequency": "general_frequency"
+      },
+      "qa_stock": {
+        "business_name": "business_name",
+        "currency_name": "currency_name",
+        "date": "snips/date",
+        "general_frequency": "general_frequency",
+        "news_topic": "news_topic",
+        "person": "person",
+        "time": "snips/time"
+      },
+      "recommendation_events": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "meal_type": "meal_type",
+        "movie_type": "movie_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "recommendation_locations": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "drink_type": "drink_type",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "meal_type": "meal_type",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "recommendation_movies": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "media_type": "media_type",
+        "movie_name": "movie_name",
+        "movie_type": "movie_type",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "social_post": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "device_type": "device_type",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "media_type": "media_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "weather_descriptor": "weather_descriptor"
+      },
+      "social_query": {
+        "date": "snips/date",
+        "event_name": "event_name",
+        "general_frequency": "general_frequency",
+        "media_type": "media_type",
+        "news_topic": "news_topic",
+        "person": "person",
+        "relation": "relation",
+        "time": "snips/time"
+      },
+      "takeaway_order": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "drink_type": "drink_type",
+        "food_type": "food_type",
+        "ingredient": "ingredient",
+        "meal_type": "meal_type",
+        "order_type": "order_type",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "takeaway_query": {
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "meal_type": "meal_type",
+        "order_type": "order_type",
+        "person": "person",
+        "personal_info": "personal_info",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "transport_query": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "person": "person",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "transport_descriptor": "transport_descriptor",
+        "transport_name": "transport_name",
+        "transport_type": "transport_type"
+      },
+      "transport_taxi": {
+        "app_name": "app_name",
+        "business_name": "business_name",
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "person": "person",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "transport_agency": "transport_agency",
+        "transport_name": "transport_name",
+        "transport_type": "transport_type"
+      },
+      "transport_ticket": {
+        "app_name": "app_name",
+        "currency_name": "currency_name",
+        "date": "snips/date",
+        "place_name": "snips/region",
+        "relation": "relation",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "transport_descriptor": "transport_descriptor",
+        "transport_name": "transport_name",
+        "transport_type": "transport_type"
+      },
+      "transport_traffic": {
+        "date": "snips/date",
+        "event_name": "event_name",
+        "place_name": "snips/region",
+        "time": "snips/time",
+        "timeofday": "snips/time"
+      },
+      "weather_query": {
+        "business_type": "business_type",
+        "date": "snips/date",
+        "event_name": "event_name",
+        "food_type": "food_type",
+        "general_frequency": "general_frequency",
+        "meal_type": "meal_type",
+        "place_name": "snips/region",
+        "query_detail": "query_detail",
+        "time": "snips/time",
+        "timeofday": "snips/time",
+        "weather_descriptor": "weather_descriptor"
+      }
+    }
+  },
+  "intent_parsers": [
+    "lookup_intent_parser",
+    "probabilistic_intent_parser"
+  ],
+  "model_version": "0.20.0",
+  "training_package_version": "0.20.2",
+  "unit_name": "nlu_engine"
+}
