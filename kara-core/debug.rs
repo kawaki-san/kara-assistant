@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use kara_audio::crossbeam_channel;
 use tracing::{info, trace};
 use tracing_subscriber::{
     filter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
@@ -7,7 +8,16 @@ use tracing_subscriber::{
 
 use crate::config::{state::ParsedConfig, ConfigFile};
 
-pub fn initialise() -> (tracing_appender::non_blocking::WorkerGuard, ParsedConfig) {
+pub fn initialise() -> (
+    tracing_appender::non_blocking::WorkerGuard,
+    ParsedConfig,
+    crossbeam_channel::Receiver<kara_nlu::NLUParser>,
+) {
+    let (tx, rx) = crossbeam_channel::bounded(1);
+    tokio::spawn(async move {
+        let engine = kara_nlu::NLUParser::new("kara-assets/nlu");
+        tx.send(engine).unwrap();
+    });
     let args = crate::cli::initialise();
     let config: ConfigFile = if let Some(file) = args.config_path() {
         match std::fs::read_to_string(file) {
@@ -54,7 +64,7 @@ pub fn initialise() -> (tracing_appender::non_blocking::WorkerGuard, ParsedConfi
         env!("CARGO_BIN_NAME"),
         env!("CARGO_PKG_VERSION")
     );
-    (guard, config)
+    (guard, config, rx)
 }
 
 fn config_path_1() -> ConfigFile {

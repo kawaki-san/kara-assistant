@@ -1,6 +1,6 @@
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 
 use iced_wgpu::{
@@ -33,7 +33,15 @@ use crate::config::state::ParsedConfig;
 
 use self::{controls::Controls, scene::Scene};
 
-pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
+enum Model {
+    Ready(kara_nlu::NLUParser),
+    Initialising,
+}
+
+pub async fn start(
+    config: &ParsedConfig,
+    rx_nlu_model: crossbeam_channel::Receiver<kara_nlu::NLUParser>,
+) -> anyhow::Result<()> {
     let stt_source = stt_source(&config.nlu.stt.source).await?;
     let handle = Handle::current();
     // Create EventLoop with 'String' user events
@@ -43,6 +51,8 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     // Keep an event that's activated when a wake word has been detected so that transcription may
     // begin. When the request has been processed, reset the flag
     let is_processing = Arc::new(AtomicBool::new(false));
+
+    let is_ready = Arc::new(AtomicBool::new(false));
     // set this to true when wake word has been detected
     let wake_up = Arc::new(AtomicBool::new(true));
     let stream = kara_audio::start_stream(
@@ -145,6 +155,18 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
         program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
     let inner_is_processing = Arc::clone(&is_processing);
     let inner_is_awake = Arc::clone(&wake_up);
+    let inner_is_ready = Arc::clone(&is_ready);
+    let model = Arc::new(Mutex::new(Model::Initialising));
+    let inner_model = Arc::clone(&model);
+    std::thread::spawn(move || {
+        let nlu_model = rx_nlu_model.recv().unwrap();
+        inner_is_ready.store(true, Ordering::Relaxed);
+        let mut model_mut = inner_model.lock().unwrap();
+        *model_mut = Model::Ready(nlu_model);
+    });
+
+    let inner_model = Arc::clone(&model);
+    let inner_is_ready = Arc::clone(&is_ready);
 
     // Run event_loop
     event_loop.run(move |event, _, control_flow| {
@@ -232,11 +254,17 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                             buffer.insert(0, buffer[i * 2]);
                         }
 
+                        let (top_color, bottom_color) = if inner_is_ready.load(Ordering::Relaxed) {
+                            ([0.0, 0.01, 0.02], [0.01, 0.0, 0.05])
+                        } else {
+                            ([0.2, 0.4, 0.4], [0.3, 0.2, 0.2])
+                        };
+
                         let (vertices, indices) = graphics::from_buffer(
                             buffer,
                             1.5,
-                            [0.0, 0.01, 0.02],
-                            [0.01, 0.0, 0.05],
+                            top_color,
+                            bottom_color,
                             [
                                 window.inner_size().width as f32 * 0.001,
                                 window.inner_size().height as f32 * 0.001,
@@ -326,12 +354,23 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
                     state.queue_message(controls::Message::TextChanged(feed));
                 }
                 kara_audio::events::KaraEvents::ProcessCommand(transcription) => {
-                    // arg is the final transcription result, do nlp/intent classification
-                    // When this is done, start listening for wake word again
-                    state.queue_message(controls::Message::TextChanged(transcription));
+                    match &*inner_model.lock().unwrap() {
+                        Model::Ready(val) => {
+                            // arg is the final transcription result, do nlp/intent classification
+                            // When this is done, start listening for wake word again
+                            state.queue_message(controls::Message::TextChanged(
+                                transcription.clone(),
+                            ));
+                            val.parse_text(transcription)
+                        }
+                        Model::Initialising => {
+                            println!("initialising");
+                        }
+                    }
+
                     // process command here;
                     inner_is_processing.store(false, Ordering::Relaxed);
-                    inner_is_awake.store(false, Ordering::Relaxed)
+                    inner_is_awake.store(true, Ordering::Relaxed)
                     // listen for wake word to start transcription again
                 }
             },
