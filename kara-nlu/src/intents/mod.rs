@@ -4,15 +4,15 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct ParsedIntent {
     pub input: String,
-    pub intent: Intent,
+    pub intent: IntentMapper,
     pub slots: Vec<Slot>,
     pub alternatives: Vec<Value>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Intent {
-    pub intent_name: Intents,
+pub struct IntentMapper {
+    pub intent_name: Option<Intent>,
     pub confidence_score: f64,
 }
 
@@ -41,10 +41,8 @@ pub struct Range {
     pub end: i64,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Deserialize)]
-pub enum Intents {
-    #[default]
-    Null,
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub enum Intent {
     #[serde(rename = "lists_createoradd")]
     ListsCreateOrAdd,
     #[serde(rename = "iot_cleaning")]

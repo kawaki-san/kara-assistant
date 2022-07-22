@@ -54,14 +54,14 @@ pub async fn start(
 
     let is_ready = Arc::new(AtomicBool::new(false));
     // set this to true when wake word has been detected
-    let wake_up = Arc::new(AtomicBool::new(true));
+    let wake_up = Arc::new(AtomicBool::new(false));
     let stream = kara_audio::start_stream(
         Config::default(),
         proxy,
         stt_source,
         Arc::clone(&is_processing),
         Arc::clone(&wake_up),
-        config.nlu.stt.pause_length,
+        Arc::clone(&is_ready),
     );
     let window = iced_winit::winit::window::WindowBuilder::new()
         .with_transparent(true)
@@ -369,7 +369,7 @@ pub async fn start(
                     // process command here;
                     inner_is_processing.store(false, Ordering::Relaxed);
                     // NOTE: Reset is_awake to false
-                    inner_is_awake.store(true, Ordering::Relaxed)
+                    inner_is_awake.store(false, Ordering::Relaxed);
                     // listen for wake word to start transcription again
                 }
             },
@@ -405,7 +405,7 @@ mod controls {
                     b: 0.0,
                     a: opacity,
                 },
-                text: String::from("Hey there"),
+                text: String::from("Getting ready, please wait..."),
             }
         }
 

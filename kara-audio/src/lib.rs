@@ -1,11 +1,10 @@
 use std::{
-    ops::{Neg, Range},
+    ops::Range,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
     thread,
-    time::Instant,
 };
 
 use cpal::{
@@ -66,7 +65,7 @@ pub fn start_stream(
     stt_source: STTSource,
     is_processing: Arc<AtomicBool>,
     wake_up: Arc<AtomicBool>,
-    pause_length: f32,
+    is_ready: Arc<AtomicBool>,
 ) -> crossbeam_channel::Sender<Event> {
     let audio_stream = AudioStream::new(&vis_settings);
     let event_sender = audio_stream.get_event_sender();
@@ -76,7 +75,7 @@ pub fn start_stream(
         stt_source,
         is_processing,
         wake_up,
-        pause_length,
+        is_ready,
     );
     event_sender
 }
@@ -87,10 +86,10 @@ pub fn init_audio_sender(
     stt_source: STTSource,
     is_processing: Arc<AtomicBool>,
     wake_up: Arc<AtomicBool>,
-    pause_length: f32,
+    is_ready: Arc<AtomicBool>,
 ) {
     let inner_is_processing = Arc::clone(&is_processing);
-    let inner_wake = Arc::clone(&wake_up);
+    let inner_is_ready = Arc::clone(&is_ready);
     let (tx, rx) = crossbeam_channel::unbounded();
     tokio::spawn(async move {
         let host = cpal::default_host();
@@ -136,12 +135,12 @@ pub fn init_audio_sender(
                     let waves_in = vec![data];
                     let waves_out = resampler.process(&waves_in, None).unwrap();
                     let s = waves_out.first().unwrap();
-                    send_to_visualiser(s, event_sender.clone());
                     // Not currently processing any command, so do transcription
                     // TODO: check if wake word here
                     if !inner_is_processing.load(Ordering::Relaxed)
-                        && inner_wake.load(Ordering::Relaxed)
+                        && inner_is_ready.load(Ordering::Relaxed)
                     {
+                        send_to_visualiser(s, event_sender.clone());
                         tx.send(data.to_owned()).unwrap();
                     }
                 },
@@ -155,53 +154,59 @@ pub fn init_audio_sender(
     // If we're not processing, spawn a new thread for transcription
     let prox = stt_proxy.clone();
     let is_processing = Arc::clone(&is_processing);
+
+    let inner_wake = Arc::clone(&wake_up);
     tokio::spawn(async move {
         loop {
-            if !is_processing.load(Ordering::Relaxed) && wake_up.load(Ordering::Relaxed) {
-                match stt_source.clone() {
+            if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
+                match &stt_source {
                     STTSource::Kara(kara_transcriber) => {
-                        let stream = Arc::clone(&kara_transcriber.recogniser());
-                        let mut stream = stream.lock().unwrap();
-                        let mut silence_start: Option<Instant> = None;
-                        let mut sound_from_start_till_pause: Vec<f32> = Vec::new();
-                        while let Ok(val) = rx.clone().recv() {
-                            sound_from_start_till_pause.extend(&val);
-                            let sound_as_ints = val.iter().map(|f| (*f * 1000.0) as i32);
-                            let max_amplitude = sound_as_ints.clone().max().unwrap_or(0);
-                            let min_amplitude = sound_as_ints.clone().min().unwrap_or(0);
-                            if kara_transcriber.show_amplitudes() {
-                                println!("Amplitude Range: {} to {}", min_amplitude, max_amplitude);
-                            }
-                            let min_bound: i32 = kara_transcriber.silence_level() as i32;
-                            let silence_detected = max_amplitude
-                                < kara_transcriber.silence_level().try_into().unwrap()
-                                && min_amplitude > min_bound.neg();
-                            if silence_detected {
-                                match silence_start {
-                                    Some(s) => {
-                                        if s.elapsed().as_secs_f32() > pause_length {
-                                            break;
+                        let stream = if inner_wake.load(Ordering::Relaxed) {
+                            Arc::clone(&kara_transcriber.recogniser())
+                        } else {
+                            Arc::clone(&kara_transcriber.wake_word_recogniser())
+                        };
+                        let mut recogniser = stream.lock().unwrap();
+                        if let Ok(val) = rx.clone().recv() {
+                            let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
+                            let stream = recogniser.accept_waveform(&val);
+                            let result = recogniser.partial_result().partial;
+                            match stream {
+                                vosk::DecodingState::Finalized => {
+                                    if inner_wake.load(Ordering::Relaxed) {
+                                        let results = recogniser
+                                            .final_result()
+                                            .single()
+                                            .unwrap()
+                                            .text
+                                            .to_owned();
+                                        if let Err(e) = stt_proxy
+                                            .send_event(KaraEvents::ProcessCommand(results))
+                                        {
+                                            error!("{e}");
+                                        } else {
+                                            is_processing.store(true, Ordering::Relaxed);
+                                            tracing::trace!("channel");
+                                        }
+                                    } else {
+                                        inner_wake.store(true, Ordering::Relaxed);
+                                        recogniser.reset();
+                                    }
+                                }
+                                vosk::DecodingState::Running => {
+                                    if inner_wake.load(Ordering::Relaxed) {
+                                        if let Err(e) = prox
+                                            .send_event(KaraEvents::SpeechFeed(result.to_owned()))
+                                        {
+                                            error!("{}", e);
                                         }
                                     }
-                                    None => silence_start = Some(Instant::now()),
+                                    if result.eq_ignore_ascii_case("[unk]") {
+                                        recogniser.reset();
+                                    }
                                 }
-                            } else {
-                                silence_start = None;
+                                vosk::DecodingState::Failed => todo!(),
                             }
-                            let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
-                            stream.accept_waveform(&val);
-                            if let Err(e) = prox.send_event(KaraEvents::SpeechFeed(
-                                stream.partial_result().partial.to_owned(),
-                            )) {
-                                error!("{}", e);
-                            }
-                        }
-                        let results = stream.final_result().single().unwrap().text.to_owned();
-                        if let Err(e) = stt_proxy.send_event(KaraEvents::ProcessCommand(results)) {
-                            error!("{e}");
-                        } else {
-                            is_processing.store(true, Ordering::Relaxed);
-                            tracing::trace!("channel");
                         }
                     }
                     STTSource::Gcp => todo!(),
