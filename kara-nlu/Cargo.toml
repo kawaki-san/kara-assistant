@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 snips-nlu-lib = { git = "https://github.com/kawaki-san/snips-nlu-rs", branch = "kawaki-patch" }
 serde_json = "1.0.82"
+serde = { version = "1.0.140", features = [ "derive"] }
