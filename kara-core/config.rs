@@ -1,7 +1,5 @@
 use serde::Deserialize;
 
-pub const DEFAULT_STT_MODEL: &str = "kara-assets/stt";
-
 #[derive(Debug, Deserialize)]
 pub struct ConfigFile {
     #[serde(rename = "general-settings")]
@@ -35,8 +33,6 @@ struct Nlu {
 
 #[derive(Debug, Deserialize)]
 struct SpeechToText {
-    #[serde(rename = "pause-length")]
-    pause_length: Option<f32>,
     source: Option<String>,
     #[serde(rename = "kara")]
     kara_config: Option<STTKara>,
@@ -46,19 +42,16 @@ struct SpeechToText {
 struct STTKara {
     #[serde(rename = "model-path")]
     model_path: Option<String>,
-    #[serde(rename = "silence-level")]
-    silence_level: Option<u32>,
-    #[serde(rename = "show-amp")]
-    show_amplitude: Option<bool>,
 }
 
 pub mod state {
-    use kara_audio::stt_sources::STTConfig;
+
+    use kara_audio::stt_sources::{default_stt_model_path, STTConfig};
     use serde::Deserialize;
 
     use crate::cli::{DebugMode, Interface};
 
-    use super::{ConfigFile, DEFAULT_STT_MODEL};
+    use super::ConfigFile;
 
     #[derive(Debug, Deserialize)]
     pub enum Units {
@@ -112,20 +105,9 @@ pub mod state {
         pub stt: SpeechToText,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Default, Debug, Deserialize)]
     pub struct SpeechToText {
-        #[serde(rename = "pause-length")]
-        pub pause_length: f32,
         pub source: STTConfig,
-    }
-
-    impl Default for SpeechToText {
-        fn default() -> Self {
-            Self {
-                pause_length: 1.5,
-                source: STTConfig::default(),
-            }
-        }
     }
 
     impl From<ConfigFile> for ParsedConfig {
@@ -190,32 +172,32 @@ pub mod state {
             let nlu = match &conf.nlu {
                 Some(nlu) => match &nlu.stt {
                     Some(stt) => {
-                        let pause_length = stt.pause_length.unwrap_or(2.0);
                         let source = match &stt.source {
                             Some(source) => match source.trim().to_lowercase().as_str() {
                                 "kara" => {
                                     let model_path: String = match &stt.kara_config {
                                         Some(paths) => {
                                             let mp = paths.model_path.as_ref();
-                                            let mp = match mp {
+                                            match mp {
                                                 Some(mp) => match mp.is_empty() {
-                                                    true => DEFAULT_STT_MODEL,
-                                                    false => mp,
+                                                    true => default_stt_model_path(),
+                                                    false => mp.to_string(),
                                                 },
-                                                None => DEFAULT_STT_MODEL,
-                                            };
-                                            mp.to_owned()
+                                                None => default_stt_model_path(),
+                                            }
                                         }
-                                        None => DEFAULT_STT_MODEL.to_owned(),
+                                        None => default_stt_model_path(),
                                     };
                                     match &stt.kara_config {
                                         Some(k_conf) => STTConfig::Kara(
-                                            model_path,
-                                            k_conf.silence_level.unwrap_or(150),
-                                            k_conf.show_amplitude.unwrap_or_default(),
+                                            k_conf
+                                                .model_path
+                                                .as_ref()
+                                                .unwrap_or(&model_path)
+                                                .to_string(),
                                         ),
 
-                                        None => STTConfig::Kara(model_path, 150, false),
+                                        None => STTConfig::Kara(model_path),
                                     }
                                 }
                                 "watson" => {
@@ -227,11 +209,11 @@ pub mod state {
                             },
                             None => STTConfig::default(),
                         };
-                        (pause_length, source)
+                        source
                     }
-                    None => (1.5, STTConfig::default()),
+                    None => STTConfig::default(),
                 },
-                None => (1.5, STTConfig::default()),
+                None => STTConfig::default(),
             };
             let window = match &conf.window {
                 Some(win) => {
@@ -258,10 +240,7 @@ pub mod state {
                     units,
                 },
                 nlu: Nlu {
-                    stt: SpeechToText {
-                        pause_length: nlu.0,
-                        source: nlu.1,
-                    },
+                    stt: SpeechToText { source: nlu },
                 },
                 window,
             }
