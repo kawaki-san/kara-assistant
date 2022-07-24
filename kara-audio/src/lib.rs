@@ -7,23 +7,31 @@ use std::{
     thread,
 };
 
-use cpal::{
-    traits::{DeviceTrait, HostTrait, StreamTrait},
-    Sample,
-};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use crossbeam_channel::Sender;
+use dasp::{sample::ToSample, Sample};
 use iced_winit::winit::event_loop::EventLoopProxy;
 use tracing::{debug, error};
 
 use self::{
     events::KaraEvents,
+    helpers::set_sample_rate,
     stream::{AudioStream, Event},
     stt_sources::STTSource,
 };
+
+mod helpers;
 
 pub mod events;
 pub mod stream;
 pub mod stt_sources;
 pub const SAMPLE_RATE: u32 = 16000;
+
+#[derive(Debug)]
+pub(crate) struct StreamDevice {
+    channel_count: u8,
+    sample_rate: u32,
+}
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -91,62 +99,72 @@ pub fn init_audio_sender(
     let inner_is_processing = Arc::clone(&is_processing);
     let inner_is_ready = Arc::clone(&is_ready);
     let (tx, rx) = crossbeam_channel::unbounded();
+
+    let err_fn = move |err| {
+        eprintln!("an error occurred on stream: {}", err);
+    };
     tokio::spawn(async move {
         let host = cpal::default_host();
         // Set up the input device and stream with the default input config.
         let device = host.default_input_device().unwrap();
         debug!("using audio device ({})", device.name().unwrap());
 
-        let mut config = device.default_input_config().unwrap();
-        if config.channels() != 1 {
-            let mut supported_configs_range = device.supported_input_configs().unwrap();
-            config = match supported_configs_range.next() {
-                Some(conf) => {
-                    conf.with_sample_rate(cpal::SampleRate(SAMPLE_RATE)) //16K from deepspeech
-                }
-                None => config,
-            };
-        }
-        let channels = config.channels();
-        let stream = device
-            .build_input_stream(
+        let config = device.default_input_config().unwrap();
+        let sample_rate = config.sample_rate().0;
+        let stream_device = StreamDevice {
+            channel_count: config.channels() as u8,
+            sample_rate,
+        };
+        debug!(
+            "using audio device ({}) with: {:#?}",
+            device.name().unwrap(),
+            stream_device
+        );
+        let stream = match config.sample_format() {
+            cpal::SampleFormat::I16 => device.build_input_stream(
                 &config.into(),
-                move |data, _: &_| {
-                    use rubato::{
-                        InterpolationParameters, InterpolationType, Resampler, SincFixedIn,
-                        WindowFunction,
-                    };
-                    let params = InterpolationParameters {
-                        sinc_len: 256,
-                        f_cutoff: 0.95,
-                        interpolation: InterpolationType::Linear,
-                        oversampling_factor: 256,
-                        window: WindowFunction::BlackmanHarris2,
-                    };
-                    let mut resampler = SincFixedIn::<f32>::new(
-                        44100_f64 / SAMPLE_RATE as f64,
-                        3.0,
-                        params,
-                        data.len(),
-                        channels.into(),
+                move |data: &[i16], _| {
+                    resample(
+                        data,
+                        &stream_device,
+                        tx.clone(),
+                        event_sender.clone(),
+                        Arc::clone(&inner_is_processing),
+                        Arc::clone(&inner_is_ready),
                     )
-                    .unwrap();
-
-                    let waves_in = vec![data];
-                    let waves_out = resampler.process(&waves_in, None).unwrap();
-                    let s = waves_out.first().unwrap();
-                    // Not currently processing any command, so do transcription
-                    // TODO: check if wake word here
-                    if !inner_is_processing.load(Ordering::Relaxed)
-                        && inner_is_ready.load(Ordering::Relaxed)
-                    {
-                        send_to_visualiser(s, event_sender.clone());
-                        tx.send(data.to_owned()).unwrap();
-                    }
                 },
                 err_fn,
-            )
-            .unwrap();
+            ),
+            cpal::SampleFormat::U16 => device.build_input_stream(
+                &config.into(),
+                move |data: &[u16], _| {
+                    resample(
+                        data,
+                        &stream_device,
+                        tx.clone(),
+                        event_sender.clone(),
+                        Arc::clone(&inner_is_processing),
+                        Arc::clone(&inner_is_ready),
+                    )
+                },
+                err_fn,
+            ),
+            cpal::SampleFormat::F32 => device.build_input_stream(
+                &config.into(),
+                move |data: &[f32], _| {
+                    resample(
+                        data,
+                        &stream_device,
+                        tx.clone(),
+                        event_sender.clone(),
+                        Arc::clone(&inner_is_processing),
+                        Arc::clone(&inner_is_ready),
+                    )
+                },
+                err_fn,
+            ),
+        }
+        .unwrap();
         stream.play().unwrap();
         // parks the thread so stream.play() does not get dropped and stops
         thread::park();
@@ -161,49 +179,24 @@ pub fn init_audio_sender(
             if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
                 match &stt_source {
                     STTSource::Kara(kara_transcriber) => {
+                        /*
                         let stream = if inner_wake.load(Ordering::Relaxed) {
-                            Arc::clone(&kara_transcriber.recogniser())
+                            kara_transcriber.recogniser()
                         } else {
-                            Arc::clone(&kara_transcriber.wake_word_recogniser())
+                            kara_transcriber.wake_word_recogniser()
                         };
+                        */
+                        let stream = kara_transcriber.recogniser();
                         let mut recogniser = stream.lock().unwrap();
                         if let Ok(val) = rx.clone().recv() {
-                            let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
                             let stream = recogniser.accept_waveform(&val);
                             let result = recogniser.partial_result().partial;
                             match stream {
                                 vosk::DecodingState::Finalized => {
-                                    if inner_wake.load(Ordering::Relaxed) {
-                                        let results = recogniser
-                                            .final_result()
-                                            .single()
-                                            .unwrap()
-                                            .text
-                                            .to_owned();
-                                        if let Err(e) = stt_proxy
-                                            .send_event(KaraEvents::ProcessCommand(results))
-                                        {
-                                            error!("{e}");
-                                        } else {
-                                            is_processing.store(true, Ordering::Relaxed);
-                                            tracing::trace!("channel");
-                                        }
-                                    } else {
-                                        inner_wake.store(true, Ordering::Relaxed);
-                                        recogniser.reset();
-                                    }
+                                    println!("{}", recogniser.result().single().unwrap().text);
                                 }
                                 vosk::DecodingState::Running => {
-                                    if inner_wake.load(Ordering::Relaxed) {
-                                        if let Err(e) = prox
-                                            .send_event(KaraEvents::SpeechFeed(result.to_owned()))
-                                        {
-                                            error!("{}", e);
-                                        }
-                                    }
-                                    if result.eq_ignore_ascii_case("[unk]") {
-                                        recogniser.reset();
-                                    }
+                                    println!("{}", recogniser.partial_result().partial);
                                 }
                                 vosk::DecodingState::Failed => todo!(),
                             }
@@ -216,13 +209,35 @@ pub fn init_audio_sender(
         }
     });
 }
-fn send_to_visualiser(data: &[f32], sender: crossbeam_channel::Sender<Event>) {
+fn send_to_visualiser(data: Vec<f32>, sender: crossbeam_channel::Sender<Event>) {
     // sends the raw data to audio_stream via the event_sender
-    sender.send(Event::SendData(data.to_vec())).unwrap();
+    sender.send(Event::SendData(data)).unwrap();
 }
 
-fn err_fn(err: cpal::StreamError) {
-    error!("an error occurred on stream: {}", err);
+fn resample(
+    data: &[impl Sample + ToSample<f32>],
+    stream_device: &StreamDevice,
+    transcription_sender: Sender<Vec<i16>>,
+    event_sender: Sender<Event>,
+    is_processing: Arc<AtomicBool>,
+    is_ready: Arc<AtomicBool>,
+) {
+    // convert 44100 to 16000
+    // convert stereo to mono
+
+    if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
+        let audio_vis: Vec<_> = data.iter().map(|f| f.to_sample::<f32>()).collect();
+        // resample samples
+        let adjusted_feed = set_sample_rate(&audio_vis, stream_device);
+        let transcription_feed = if stream_device.channel_count != 1 {
+            helpers::stereo_to_mono(&adjusted_feed)
+        } else {
+            adjusted_feed
+        };
+
+        send_to_visualiser(audio_vis, event_sender);
+        transcription_sender.send(transcription_feed).unwrap();
+    }
 }
 
 pub use crossbeam_channel;
