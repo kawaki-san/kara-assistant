@@ -11,16 +11,14 @@ pub fn convert_buffer(input_buffer: &Vec<f32>, config: &Config) -> Vec<f32> {
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(input_buffer.len());
 
-    let mut buffer: Vec<Complex<f32>> = Vec::new();
-    for i in input_buffer.iter() {
-        buffer.push(Complex { re: *i, im: 0.0 });
-    }
+    let mut buffer: Vec<Complex<f32>> = input_buffer
+        .iter()
+        .map(|f| Complex { re: *f, im: 0.0 })
+        .collect();
+
     fft.process(&mut buffer[..]);
 
-    let mut output_buffer: Vec<f32> = Vec::new();
-    for i in buffer.iter() {
-        output_buffer.push(i.norm())
-    }
+    let output_buffer: Vec<f32> = buffer.iter().map(|f| f.norm()).collect();
 
     // remove mirroring
     let output_buffer = output_buffer[0..(output_buffer.len() as f32 * 0.25) as usize].to_vec();
@@ -53,12 +51,11 @@ pub fn convert_buffer(input_buffer: &Vec<f32>, config: &Config) -> Vec<f32> {
 fn apodize(buffer: &Vec<f32>) -> Vec<f32> {
     let window = apodize::hanning_iter(buffer.len()).collect::<Vec<f64>>();
 
-    let mut output_buffer: Vec<f32> = Vec::new();
-
-    for i in 0..buffer.len() {
-        output_buffer.push(window[i] as f32 * buffer[i]);
-    }
-    output_buffer
+    buffer
+        .iter()
+        .enumerate()
+        .map(|(idx, val)| window[idx] as f32 * val)
+        .collect()
 }
 
 fn scale_frequencies(
@@ -102,7 +99,7 @@ fn normalize(buffer: Vec<f32>, volume: f32) -> Vec<f32> {
     let mut start_pos: usize = 0;
     let mut end_pos: usize = 0;
 
-    let mut pos_index: Vec<[usize; 2]> = Vec::new();
+    let mut pos_index: Vec<[usize; 2]> = Vec::with_capacity(buffer_len);
 
     for i in 0..buffer_len {
         let offset: f32 = (buffer_len as f32 / (i + 1) as f32).sqrt();
