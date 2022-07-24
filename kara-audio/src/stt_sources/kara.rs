@@ -25,22 +25,16 @@ const VOSK_MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-sma
 #[derive(Clone)]
 pub struct KaraTranscriber {
     recogniser_main: Arc<Mutex<vosk::Recognizer>>,
-    recogniser_wake_word: Arc<Mutex<vosk::Recognizer>>,
 }
 
 impl KaraTranscriber {
-    pub fn new(recogniser_main: vosk::Recognizer, recogniser_wake_word: vosk::Recognizer) -> Self {
+    pub fn new(recogniser_main: vosk::Recognizer) -> Self {
         Self {
             recogniser_main: Arc::new(Mutex::new(recogniser_main)),
-            recogniser_wake_word: Arc::new(Mutex::new(recogniser_wake_word)),
         }
     }
     pub fn recogniser(&self) -> Arc<Mutex<vosk::Recognizer>> {
         Arc::clone(&self.recogniser_main)
-    }
-
-    pub fn wake_word_recogniser(&self) -> Arc<Mutex<vosk::Recognizer>> {
-        Arc::clone(&self.recogniser_wake_word)
     }
 }
 
@@ -56,22 +50,12 @@ pub(crate) async fn init_kara_model(model: &str) -> Result<STTSource> {
         Ok(vosk_model) => {
             let mut recogniser = Recognizer::new(&vosk_model, SAMPLE_RATE as f32)
                 .ok_or("failed to initialise recogniser")?;
-            // recogniser.set_max_alternatives(10);
             recogniser.set_words(true);
             recogniser.set_partial_words(true);
 
-            let mut recogniser_wake_word =
-                Recognizer::new_with_grammar(&vosk_model, SAMPLE_RATE as f32, &wake_words())
-                    .unwrap();
-
-            recogniser_wake_word.set_words(true);
-            recogniser_wake_word.set_partial_words(true);
             trace!(path = %model, "located model");
             trace!("kara stt model initialised");
-            Ok(STTSource::Kara(KaraTranscriber::new(
-                recogniser,
-                recogniser_wake_word,
-            )))
+            Ok(STTSource::Kara(KaraTranscriber::new(recogniser)))
         }
         Err(e) => {
             warn!("{e}");
@@ -257,21 +241,12 @@ async fn extract_file(file: File, parent: &Path, file_name: &str) -> Result<STTS
     let vosk_model = vosk::Model::new(format!("{}/{file_name}", parent.display()))
         .ok_or("failed to initialise model")?;
 
-    let mut recogniser_main = Recognizer::new(&vosk_model, SAMPLE_RATE as f32)
+    let mut recogniser = Recognizer::new(&vosk_model, SAMPLE_RATE as f32)
         .ok_or("failed to initialise recogniser")?;
-    let mut recogniser_wake_word =
-        Recognizer::new_with_grammar(&vosk_model, SAMPLE_RATE as f32, &wake_words()).unwrap();
-
-    recogniser_wake_word.set_words(true);
-    recogniser_wake_word.set_partial_words(true);
-    // recogniser.set_max_alternatives(10);
-    recogniser_main.set_words(true);
-    recogniser_main.set_partial_words(true);
+    recogniser.set_words(true);
+    recogniser.set_partial_words(true);
     trace!("kara stt model initialised");
-    Ok(STTSource::Kara(KaraTranscriber::new(
-        recogniser_main,
-        recogniser_wake_word,
-    )))
+    Ok(STTSource::Kara(KaraTranscriber::new(recogniser)))
 }
 
 async fn data_dir() -> PathBuf {
@@ -282,7 +257,9 @@ async fn data_dir() -> PathBuf {
     dir
 }
 
+/*
 fn wake_words() -> Vec<String> {
-    let words = vec!["\"hey kara\", \"[unk]\""];
+    let words = vec!["\"bicycle kara\", \"[unk]\""];
     words.into_iter().map(String::from).collect()
 }
+*/

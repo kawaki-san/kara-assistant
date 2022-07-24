@@ -1,5 +1,6 @@
 pub enum KaraEvents {
-    WakeWordDetected(bool),
+    WakeUp(bool),
     SpeechFeed(String),
     ProcessCommand(String),
+    IsBusy(bool),
 }

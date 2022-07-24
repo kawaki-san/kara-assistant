@@ -90,7 +90,7 @@ pub fn start_stream(
 
 pub fn init_audio_sender(
     event_sender: crossbeam_channel::Sender<Event>,
-    stt_proxy: EventLoopProxy<KaraEvents>,
+    event_proxy: EventLoopProxy<KaraEvents>,
     stt_source: STTSource,
     is_processing: Arc<AtomicBool>,
     wake_up: Arc<AtomicBool>,
@@ -103,6 +103,7 @@ pub fn init_audio_sender(
     let err_fn = move |err| {
         eprintln!("an error occurred on stream: {}", err);
     };
+
     tokio::spawn(async move {
         let host = cpal::default_host();
         // Set up the input device and stream with the default input config.
@@ -170,7 +171,6 @@ pub fn init_audio_sender(
         thread::park();
     });
     // If we're not processing, spawn a new thread for transcription
-    let prox = stt_proxy.clone();
     let is_processing = Arc::clone(&is_processing);
 
     let inner_wake = Arc::clone(&wake_up);
@@ -183,23 +183,37 @@ pub fn init_audio_sender(
                         let stream = if inner_wake.load(Ordering::Relaxed) {
                             kara_transcriber.recogniser()
                         } else {
-                            kara_transcriber.wake_word_recogniser()
+                            todo!("wake word listener");
                         };
                         */
                         let stream = kara_transcriber.recogniser();
                         let mut recogniser = stream.lock().unwrap();
-                        if let Ok(val) = rx.clone().recv() {
+                        while let Ok(val) = rx.clone().recv() {
                             let stream = recogniser.accept_waveform(&val);
-                            let result = recogniser.partial_result().partial;
                             match stream {
                                 vosk::DecodingState::Finalized => {
-                                    println!("{}", recogniser.result().single().unwrap().text);
+                                    break;
                                 }
                                 vosk::DecodingState::Running => {
-                                    println!("{}", recogniser.partial_result().partial);
+                                    if let Err(e) = event_proxy.send_event(KaraEvents::SpeechFeed(
+                                        recogniser.partial_result().partial.to_owned(),
+                                    )) {
+                                        error!("{}", e);
+                                    }
                                 }
                                 vosk::DecodingState::Failed => todo!(),
                             }
+                        }
+
+                        if inner_wake.load(Ordering::Relaxed) {
+                            // We're awake so process command
+                            if let Err(e) = event_proxy.send_event(KaraEvents::ProcessCommand(
+                                recogniser.result().single().unwrap().text.to_owned(),
+                            )) {
+                                error!("{e}");
+                            };
+                        } else {
+                            // check if wake word and send wake up event
                         }
                     }
                     STTSource::Gcp => todo!(),
@@ -224,8 +238,11 @@ fn resample(
 ) {
     // convert 44100 to 16000
     // convert stereo to mono
-
-    if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
+    if !is_ready.load(Ordering::Relaxed) {
+        // if kara is still getting ready, write a constant on the vis
+        let silence = write_silence(data);
+        send_to_visualiser(silence, event_sender);
+    } else if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
         let audio_vis: Vec<_> = data.iter().map(|f| f.to_sample::<f32>()).collect();
         // resample samples
         let adjusted_feed = set_sample_rate(&audio_vis, stream_device);
@@ -238,6 +255,12 @@ fn resample(
         send_to_visualiser(audio_vis, event_sender);
         transcription_sender.send(transcription_feed).unwrap();
     }
+}
+
+fn write_silence(data: &[impl Sample + ToSample<f32>]) -> Vec<f32> {
+    let mut data: Vec<_> = data.to_owned();
+    let data = data.iter_mut().map(|_| 0.01.to_sample::<f32>()).collect();
+    data
 }
 
 pub use crossbeam_channel;

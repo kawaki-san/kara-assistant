@@ -57,7 +57,7 @@ pub async fn start(
     let wake_up = Arc::new(AtomicBool::new(false));
     let stream = kara_audio::start_stream(
         Config::default(),
-        proxy,
+        proxy.clone(),
         stt_source,
         Arc::clone(&is_processing),
         Arc::clone(&wake_up),
@@ -254,7 +254,9 @@ pub async fn start(
                             buffer.insert(0, buffer[i * 2]);
                         }
 
-                        let (top_color, bottom_color) = if inner_is_ready.load(Ordering::Relaxed) {
+                        let (top_color, bottom_color) = if inner_is_ready.load(Ordering::Relaxed)
+                            && wake_up.load(Ordering::Relaxed)
+                        {
                             ([0.0, 0.01, 0.02], [0.01, 0.0, 0.05])
                         } else {
                             ([0.2, 0.4, 0.4], [0.3, 0.2, 0.2])
@@ -342,35 +344,43 @@ pub async fn start(
             }
             // Receiving feed (speech) from the user
             Event::UserEvent(val) => match val {
-                kara_audio::events::KaraEvents::WakeWordDetected(val) => {
+                kara_audio::events::KaraEvents::WakeUp(val) => {
                     // transcription will happen if @wake_up is true AND @is_processing is false
                     inner_is_awake.store(val, Ordering::Relaxed);
-                    if val {
-                        // if wake word has been detected, begin transcription
-                        // change visualiser colour to active
-                    }
+
+                    // if wake word has been detected, begin transcription
+                    // change visualiser colour to active
                 }
                 kara_audio::events::KaraEvents::SpeechFeed(feed) => {
                     state.queue_message(controls::Message::TextChanged(feed));
                 }
                 kara_audio::events::KaraEvents::ProcessCommand(transcription) => {
-                    match &*inner_model.lock().unwrap() {
-                        Model::Ready(val) => {
-                            // arg is the final transcription result, do nlp/intent classification
-                            // When this is done, start listening for wake word again
-                            state.queue_message(controls::Message::TextChanged(
-                                transcription.clone(),
-                            ));
-                            val.parse_text(transcription)
-                        }
-                        Model::Initialising => {}
+                    // Set to busy
+                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::IsBusy(true)) {
+                        error!("{}", e);
+                    }
+                    if let Model::Ready(val) = &*inner_model.lock().unwrap() {
+                        // arg is the final transcription result, do nlp/intent classification
+                        // When this is done, start listening for wake word again
+                        state.queue_message(controls::Message::TextChanged(transcription.clone()));
+                        val.parse_text(transcription)
+                    }
+                    // process command here;
+                    //
+                    // No longer busy and ready for more commands
+                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::IsBusy(false))
+                    {
+                        error!("{}", e);
                     }
 
-                    // process command here;
-                    inner_is_processing.store(false, Ordering::Relaxed);
-                    // NOTE: Reset is_awake to false
-                    inner_is_awake.store(false, Ordering::Relaxed);
-                    // listen for wake word to start transcription again
+                    // Reset wake word so we listen for transcription again
+                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::WakeUp(false))
+                    {
+                        error!("{}", e);
+                    }
+                }
+                kara_audio::events::KaraEvents::IsBusy(val) => {
+                    inner_is_processing.store(val, Ordering::Relaxed)
                 }
             },
             _ => {}
