@@ -12,7 +12,7 @@
 <img src="./kara-assets/kara.png" width="836" />
 </div>
 
-# Dependencies
+# Build Dependencies
 
 1. curl
 2. [`cargo-make`](https://github.com/sagiegurari/cargo-make)
