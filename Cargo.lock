@@ -1887,6 +1887,7 @@ dependencies = [
  "iced_wgpu",
  "iced_winit",
  "kara-audio",
+ "kara-events",
  "kara-nlu",
  "serde",
  "tokio",
@@ -1910,6 +1911,7 @@ dependencies = [
  "gag",
  "iced_winit",
  "indicatif",
+ "kara-events",
  "reqwest",
  "rustfft",
  "serde",
@@ -1918,6 +1920,10 @@ dependencies = [
  "vosk",
  "zip 0.6.2",
 ]
+
+[[package]]
+name = "kara-events"
+version = "0.1.0"
 
 [[package]]
 name = "kara-nlu"

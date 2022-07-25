@@ -16,6 +16,7 @@ iced_wgpu = { git = "https://github.com/iced-rs/iced", features = [ "webgl" ] }
 anyhow = "1.0.57"
 kara-audio = { path = "./kara-audio" }
 kara-nlu = { path = "./kara-nlu" }
+kara-events = { path = "./kara-events" }
 bytemuck = { version = "1.9.1", features = [ "derive" ] }
 tokio = { version = "1.18.0", features = [ "macros", "rt-multi-thread" ] }
 serde = { version = "1.0.137", features = [ "derive" ] }
@@ -25,6 +26,7 @@ toml = "0.5.9"
 members = [
   "kara-audio",
   "kara-nlu",
+  "kara-events",
 ]
 
 [[bin]]

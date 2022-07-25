@@ -11,10 +11,10 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crossbeam_channel::Sender;
 use dasp::{sample::ToSample, Sample};
 use iced_winit::winit::event_loop::EventLoopProxy;
+use kara_events::KaraEvents;
 use tracing::{debug, error};
 
 use self::{
-    events::KaraEvents,
     helpers::set_sample_rate,
     stream::{AudioStream, Event},
     stt_sources::STTSource,
@@ -22,7 +22,6 @@ use self::{
 
 mod helpers;
 
-pub mod events;
 pub mod stream;
 pub mod stt_sources;
 pub const SAMPLE_RATE: u32 = 16000;

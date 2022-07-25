@@ -344,19 +344,19 @@ pub async fn start(
             }
             // Receiving feed (speech) from the user
             Event::UserEvent(val) => match val {
-                kara_audio::events::KaraEvents::WakeUp(val) => {
+                kara_events::KaraEvents::WakeUp(val) => {
                     // transcription will happen if @wake_up is true AND @is_processing is false
                     inner_is_awake.store(val, Ordering::Relaxed);
 
                     // if wake word has been detected, begin transcription
                     // change visualiser colour to active
                 }
-                kara_audio::events::KaraEvents::SpeechFeed(feed) => {
+                kara_events::KaraEvents::SpeechFeed(feed) => {
                     state.queue_message(controls::Message::TextChanged(feed));
                 }
-                kara_audio::events::KaraEvents::ProcessCommand(transcription) => {
+                kara_events::KaraEvents::ProcessCommand(transcription) => {
                     // Set to busy
-                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::IsBusy(true)) {
+                    if let Err(e) = proxy.send_event(kara_events::KaraEvents::IsBusy(true)) {
                         error!("{}", e);
                     }
                     if let Model::Ready(val) = &*inner_model.lock().unwrap() {
@@ -368,18 +368,16 @@ pub async fn start(
                     // process command here;
                     //
                     // No longer busy and ready for more commands
-                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::IsBusy(false))
-                    {
+                    if let Err(e) = proxy.send_event(kara_events::KaraEvents::IsBusy(false)) {
                         error!("{}", e);
                     }
 
                     // Reset wake word so we listen for transcription again
-                    if let Err(e) = proxy.send_event(kara_audio::events::KaraEvents::WakeUp(false))
-                    {
+                    if let Err(e) = proxy.send_event(kara_events::KaraEvents::WakeUp(false)) {
                         error!("{}", e);
                     }
                 }
-                kara_audio::events::KaraEvents::IsBusy(val) => {
+                kara_events::KaraEvents::IsBusy(val) => {
                     inner_is_processing.store(val, Ordering::Relaxed)
                 }
             },
