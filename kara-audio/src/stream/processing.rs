@@ -91,7 +91,6 @@ fn scale_frequencies(
     }
 }
 
-#[allow(clippy::needless_range_loop)]
 fn normalize(buffer: Vec<f32>, volume: f32) -> Vec<f32> {
     let buffer_len: usize = buffer.len();
     let mut output_buffer: Vec<f32> = vec![0.0; buffer_len];
