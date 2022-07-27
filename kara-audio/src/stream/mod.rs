@@ -37,18 +37,17 @@ impl AudioStream {
                 match event_receiver.recv().unwrap() {
                     Event::SendData(mut b) => {
                         buffer.append(&mut b);
-                        while buffer.len() > config.resolution {
-                            let c_b =
-                                convert_buffer(&buffer[0..config.resolution].to_vec(), &config);
+                        let resolution = config.resolution.into();
+                        while buffer.len() > resolution {
+                            let c_b = convert_buffer(&buffer[0..resolution].to_vec(), &config);
 
                             calculated_buffer = if !calculated_buffer.is_empty() {
                                 merge_buffers(&vec![calculated_buffer, c_b])
                             } else {
                                 c_b
                             };
-
                             // remove already calculated parts
-                            buffer.drain(0..config.resolution);
+                            buffer.drain(0..resolution);
                         }
                     }
                     Event::RequestData(sender) => {
@@ -65,7 +64,7 @@ impl AudioStream {
                         } else {
                             Vec::new()
                         };
-                        while smoothing_buffer.len() > config.buffering {
+                        while smoothing_buffer.len() > config.buffering.into() {
                             smoothing_buffer.remove(0);
                         }
                     }

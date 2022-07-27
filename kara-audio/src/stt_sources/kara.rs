@@ -22,19 +22,27 @@ use super::STTSource;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 const VOSK_MODEL_URL: &str = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip";
 
+const WAKE_WORD: &[&str] = &["hey kara", "[unk]"];
+
 #[derive(Clone)]
 pub struct KaraTranscriber {
     recogniser_main: Arc<Mutex<vosk::Recognizer>>,
+    recogniser_wake: Arc<Mutex<vosk::Recognizer>>,
 }
 
 impl KaraTranscriber {
-    pub fn new(recogniser_main: vosk::Recognizer) -> Self {
+    pub fn new(recogniser_main: vosk::Recognizer, recogniser_wake: vosk::Recognizer) -> Self {
         Self {
             recogniser_main: Arc::new(Mutex::new(recogniser_main)),
+            recogniser_wake: Arc::new(Mutex::new(recogniser_wake)),
         }
     }
     pub fn recogniser(&self) -> Arc<Mutex<vosk::Recognizer>> {
         Arc::clone(&self.recogniser_main)
+    }
+
+    pub fn recogniser_wake(&self) -> Arc<Mutex<vosk::Recognizer>> {
+        Arc::clone(&self.recogniser_wake)
     }
 }
 
@@ -54,8 +62,11 @@ pub(crate) async fn init_kara_model(model: &str) -> Result<STTSource> {
             recogniser.set_partial_words(true);
 
             trace!(path = %model, "located model");
+
+            let words_rec =
+                Recognizer::new_with_grammar(&vosk_model, SAMPLE_RATE as f32, WAKE_WORD).unwrap();
             trace!("kara stt model initialised");
-            Ok(STTSource::Kara(KaraTranscriber::new(recogniser)))
+            Ok(STTSource::Kara(KaraTranscriber::new(recogniser, words_rec)))
         }
         Err(e) => {
             warn!("{e}");
@@ -245,8 +256,12 @@ async fn extract_file(file: File, parent: &Path, file_name: &str) -> Result<STTS
         .ok_or("failed to initialise recogniser")?;
     recogniser.set_words(true);
     recogniser.set_partial_words(true);
+
+    let words_rec =
+        Recognizer::new_with_grammar(&vosk_model, SAMPLE_RATE as f32, WAKE_WORD).unwrap();
+
     trace!("kara stt model initialised");
-    Ok(STTSource::Kara(KaraTranscriber::new(recogniser)))
+    Ok(STTSource::Kara(KaraTranscriber::new(recogniser, words_rec)))
 }
 
 async fn data_dir() -> PathBuf {
@@ -256,10 +271,3 @@ async fn data_dir() -> PathBuf {
     create_dir_all(&dir).await.unwrap();
     dir
 }
-
-/*
-fn wake_words() -> Vec<String> {
-    let words = vec!["\"bicycle kara\", \"[unk]\""];
-    words.into_iter().map(String::from).collect()
-}
-*/

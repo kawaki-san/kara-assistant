@@ -4006,8 +4006,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "vosk"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c8b4b70bad032d02bc4523d6941b38857d2385a1eda56702bf15347abb72d02"
+source = "git+https://github.com/kawaki-san/vosk-rs#034f6f63713c54658560321d3978e9b91c4f830d"
 dependencies = [
  "serde",
  "serde_json",

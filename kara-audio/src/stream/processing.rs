@@ -58,12 +58,7 @@ fn apodize(buffer: &Vec<f32>) -> Vec<f32> {
         .collect()
 }
 
-fn scale_frequencies(
-    buffer: &mut Vec<f32>,
-    fav_freqs: &Range<usize>,
-    doubling: usize,
-    max_freqs: usize,
-) {
+fn scale_frequencies(buffer: &mut Vec<f32>, fav_freqs: &Range<u16>, doubling: u8, max_freqs: u16) {
     let mut doubled: usize = 0;
     let buffer_len = buffer.len();
     for _ in 0..doubling {
@@ -95,48 +90,44 @@ fn normalize(buffer: Vec<f32>, volume: f32) -> Vec<f32> {
     let buffer_len: usize = buffer.len();
     let mut output_buffer: Vec<f32> = vec![0.0; buffer_len];
 
-    let mut start_pos: usize = 0;
+    let mut start_pos: usize;
     let mut end_pos: usize = 0;
 
     let mut pos_index: Vec<[usize; 2]> = Vec::with_capacity(buffer_len);
 
-    for i in 0..buffer_len {
+    for (i, item) in buffer.iter().enumerate().take(buffer_len) {
         let offset: f32 = (buffer_len as f32 / (i + 1) as f32).sqrt();
-        if ((i as f32 * offset) as usize) < output_buffer.len() {
-            // sets positions needed for future operations
-            let pos: usize = (i as f32 * offset) as usize;
-            start_pos = end_pos;
-            end_pos = pos;
-            pos_index.push([start_pos, end_pos]);
+        // sets positions needed for future operations
+        let pos: usize = (i as f32 * offset) as usize;
+        start_pos = end_pos;
+        end_pos = pos;
+        pos_index.push([start_pos, end_pos]);
 
-            // volume normalisation
-            //let y = buffer[i] / offset.powi(2) * volume /* old and non linear method */
-            let offset = (i + 1) as f32 / 20_000.0;
-            let y = buffer[i] * offset * volume; /* new and linear method */
+        // volume normalisation
+        //let y = buffer[i] / offset.powi(2) * volume /* old and non linear method */
+        let offset = (i + 1) as f32 / 20_000.0;
+        let y = item * offset * volume; /* new and linear method */
 
-            if output_buffer[pos] < y {
-                output_buffer[pos] = y;
-            }
+        if output_buffer[pos] < y {
+            output_buffer[pos] = y;
         }
-        if end_pos - start_pos > 1 && (end_pos - 1) < output_buffer.len() {
-            // filling
-            for s_p in (start_pos + 1)..end_pos {
-                let percentage: f32 = (s_p - start_pos) as f32 / ((end_pos - 1) - start_pos) as f32;
+        // filling
+        for s_p in (start_pos + 1)..end_pos {
+            let percentage: f32 = (s_p - start_pos) as f32 / ((end_pos - 1) - start_pos) as f32;
 
-                let mut y: f32 = 0.0;
-                //(output_buffer[s_p] * (1.0 - percentage) ) + (output_buffer[end_pos] * percentage);
-                y += output_buffer[start_pos] * (1.0 - percentage);
-                y += output_buffer[end_pos] * percentage;
-                output_buffer[s_p] = y;
-            }
+            let mut y: f32 = 0.0;
+            //(output_buffer[s_p] * (1.0 - percentage) ) + (output_buffer[end_pos] * percentage);
+            y += output_buffer[start_pos] * (1.0 - percentage);
+            y += output_buffer[end_pos] * percentage;
+            output_buffer[s_p] = y;
         }
     }
 
     output_buffer
 }
 
-fn smooth(buffer: &mut Vec<f32>, smoothing: usize, smoothing_size: usize) {
-    if buffer.len() <= smoothing_size || smoothing_size == 0 {
+fn smooth(buffer: &mut Vec<f32>, smoothing: u8, smoothing_size: u8) {
+    if buffer.len() <= smoothing_size.into() || smoothing_size == 0 {
         return;
     }
     for _ in 0..smoothing {
@@ -156,7 +147,7 @@ fn smooth(buffer: &mut Vec<f32>, smoothing: usize, smoothing_size: usize) {
     }
 }
 
-fn bar_reduction(buffer: &mut Vec<f32>, bar_reduction: usize) {
+fn bar_reduction(buffer: &mut Vec<f32>, bar_reduction: u8) {
     if bar_reduction == 0 {
         return;
     }
@@ -172,6 +163,7 @@ fn bar_reduction(buffer: &mut Vec<f32>, bar_reduction: usize) {
         let mut y: f32 = 0.0;
         let mut smoothed_amount: usize = 0;
         for x in 0..bar_reduction {
+            let x = x.into();
             if position + x < buffer.len() {
                 let value = buffer[position + x];
                 y += value;
@@ -203,7 +195,7 @@ fn bar_reduction(buffer: &mut Vec<f32>, bar_reduction: usize) {
 // EVERY 1D buffer of whole buffer MUST have the same length, but the current implementation guarantees this, considering the resolution stays the same
 // if size changes you have to call 'Event::ClearBuffer'
 pub fn merge_buffers(
-    buffer: &Vec<Vec<f32>>, // EVERY 1D buffer of whole buffer MUST have the same length
+    buffer: &[Vec<f32>], // EVERY 1D buffer of whole buffer MUST have the same length
 ) -> Vec<f32> {
     let mut smoothed_percentage: f32 = 0.0;
     let mut output_buffer: Vec<f32> = vec![0.0; buffer[0].len()];

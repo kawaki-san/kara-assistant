@@ -10,7 +10,7 @@ tracing = "0.1.34"
 rustfft = "6.0.1"
 cpal = "0.13.5"
 apodize = "1.0.0"
-vosk = "0.1.0"
+vosk = { git = "https://github.com/kawaki-san/vosk-rs" }
 tokio = { version = "1.18.0", features = [ "rt-multi-thread", "fs", "io-util" ] }
 iced_winit = { git = "https://github.com/iced-rs/iced" }
 serde = { version = "1.0.137", features = [ "derive" ] }

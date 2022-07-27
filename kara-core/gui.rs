@@ -346,6 +346,7 @@ pub async fn start(
             Event::UserEvent(val) => match val {
                 kara_events::KaraEvents::WakeUp(val) => {
                     // transcription will happen if @wake_up is true AND @is_processing is false
+                    //
                     inner_is_awake.store(val, Ordering::Relaxed);
 
                     // if wake word has been detected, begin transcription

@@ -34,15 +34,15 @@ pub(crate) struct StreamDevice {
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub buffering: usize,
-    pub smoothing_size: usize,
-    pub smoothing_amount: usize,
-    pub resolution: usize,
-    pub refresh_rate: usize,
-    pub frequency_scale_range: Range<usize>,
-    pub frequency_scale_amount: usize,
-    pub density_reduction: usize,
-    pub max_frequency: usize,
+    pub buffering: u8,
+    pub smoothing_size: u8,
+    pub smoothing_amount: u8,
+    pub resolution: u16,
+    pub refresh_rate: u8,
+    pub frequency_scale_range: Range<u16>,
+    pub frequency_scale_amount: u8,
+    pub density_reduction: u8,
+    pub max_frequency: u16,
     pub volume: f32,
 }
 impl Default for Config {
@@ -178,33 +178,37 @@ pub fn init_audio_sender(
             if !is_processing.load(Ordering::Relaxed) && is_ready.load(Ordering::Relaxed) {
                 match &stt_source {
                     STTSource::Kara(kara_transcriber) => {
-                        /*
-                        let stream = if inner_wake.load(Ordering::Relaxed) {
+                        use gag::Gag;
+                        let _print_gag = Gag::stderr().unwrap();
+                        let is_awake = inner_wake.load(Ordering::Relaxed);
+                        let stream = if is_awake {
                             kara_transcriber.recogniser()
                         } else {
-                            todo!("wake word listener");
+                            kara_transcriber.recogniser_wake()
                         };
-                        */
-                        let stream = kara_transcriber.recogniser();
                         let mut recogniser = stream.lock().unwrap();
                         while let Ok(val) = rx.clone().recv() {
-                            let stream = recogniser.accept_waveform(&val);
-                            match stream {
+                            let state = recogniser.accept_waveform(&val);
+                            match state {
                                 vosk::DecodingState::Finalized => {
                                     break;
                                 }
                                 vosk::DecodingState::Running => {
-                                    if let Err(e) = event_proxy.send_event(KaraEvents::SpeechFeed(
-                                        recogniser.partial_result().partial.to_owned(),
-                                    )) {
-                                        error!("{}", e);
+                                    if is_awake {
+                                        if let Err(e) =
+                                            event_proxy.send_event(KaraEvents::SpeechFeed(
+                                                recogniser.partial_result().partial.to_owned(),
+                                            ))
+                                        {
+                                            error!("{}", e);
+                                        }
                                     }
                                 }
                                 vosk::DecodingState::Failed => todo!(),
                             }
                         }
 
-                        if inner_wake.load(Ordering::Relaxed) {
+                        if is_awake {
                             // We're awake so process command
                             if let Err(e) = event_proxy.send_event(KaraEvents::ProcessCommand(
                                 recogniser.result().single().unwrap().text.to_owned(),
@@ -213,6 +217,20 @@ pub fn init_audio_sender(
                             };
                         } else {
                             // check if wake word and send wake up event
+                            if recogniser
+                                .final_result()
+                                .single()
+                                .unwrap()
+                                .text
+                                .eq_ignore_ascii_case("hey kara")
+                            {
+                                inner_wake.store(true, Ordering::Relaxed);
+                                /*
+                                if let Err(e) = event_proxy.send_event(KaraEvents::WakeUp(true)) {
+                                    error!("{e}");
+                                }
+                                */
+                            }
                         }
                     }
                     STTSource::Gcp => todo!(),
